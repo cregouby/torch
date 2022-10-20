@@ -178,13 +178,15 @@ jobs:
           echo "CUDNN_LIBRARY_PATH=""${CUDA_PATH}\lib\x64""" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Install ROCm
-        if: ${{matrix.config.rocm != ''}}
+        if: ${{matrix.config.rocm != '' && contains(matrix.config.os, 'ubuntu') }}
         run: |
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl libnuma-dev gnupg 
           curl -sL http://repo.radeon.com/rocm/apt/debian/rocm.gpg.key | apt-key add - 
           printf "deb [arch=amd64] http://repo.radeon.com/rocm/apt/debian/ xenial main" | tee /etc/apt/sources.list.d/rocm.list
-          apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends sudo libelf1 rocm-dev build-essential && \
-          apt-get clean && rm -rf /var/lib/apt/lists/*
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends sudo libelf1 rocm-dev build-essential
+          apt-get clean
+          rm -rf /var/lib/apt/lists/*
 
       - name: Run cmake
         run: |
