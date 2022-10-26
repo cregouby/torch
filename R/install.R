@@ -41,7 +41,7 @@ install_config <- list(
         "liblantern" = sprintf("https://storage.googleapis.com/torch-lantern-builds/refs/heads/%s/latest/Linux-cpu.zip", branch)
       )
     ),
-    "10.2" = list(
+    "CUDA 10.2" = list(
       "linux" = list(
         "libtorch" = list(
           path = "libtorch/",
@@ -51,7 +51,7 @@ install_config <- list(
         "liblantern" = sprintf("https://storage.googleapis.com/torch-lantern-builds/refs/heads/%s/latest/Linux-gpu-102.zip", branch)
       )
     ),
-    "11.3" = list(
+    "CUDA 11.3" = list(
       "linux" = list(
         "libtorch" = list(
           path = "libtorch/",
@@ -70,7 +70,7 @@ install_config <- list(
         "liblantern" = sprintf("https://storage.googleapis.com/torch-lantern-builds/refs/heads/%s/latest/Windows-gpu-113.zip", branch)
       )
     ),
-    "11.6" = list(
+    "CUDA 11.6" = list(
       "linux" = list(
         "libtorch" = list(
           path = "libtorch/",
@@ -78,6 +78,36 @@ install_config <- list(
           md5hash = "7972b17fa957f5d8f079035790b92207"
         ),
         "liblantern" = sprintf("https://storage.googleapis.com/torch-lantern-builds/refs/heads/%s/latest/Linux-gpu-116.zip", branch)
+      )
+    ),
+    "ROCm 5.1" = list(
+      "linux" = list(
+        "libtorch" = list(
+          path = "libtorch/",
+          url = "https://download.pytorch.org/libtorch/rocm5.1.1/libtorch-cxx11-abi-shared-with-deps-1.12.1%2Brocm5.1.1.zip",
+          md5hash = "7972b17fa957f5d8f079035790b92207"
+        ),
+        "liblantern" = sprintf("https://storage.googleapis.com/torch-lantern-builds/refs/heads/%s/latest/Linux-rocm-51.zip", branch)
+      )
+    ),
+    "ROCm 5.2" = list(
+      "linux" = list(
+        "libtorch" = list(
+          path = "libtorch/",
+          url = "https://download.pytorch.org/libtorch/nightly/rocm5.2/libtorch-cxx11-abi-shared-with-deps-latest.zip",
+          md5hash = "7972b17fa957f5d8f079035790b92207"
+        ),
+        "liblantern" = sprintf("https://storage.googleapis.com/torch-lantern-builds/refs/heads/%s/latest/Linux-rocm-52.zip", branch)
+      )
+    ),
+    "ROCm 5.3" = list(
+      "linux" = list(
+        "libtorch" = list(
+          path = "libtorch/",
+          url = "https://download.pytorch.org/libtorch/nightly/rocm5.2/libtorch-cxx11-abi-shared-with-deps-latest.zip",
+          md5hash = "7972b17fa957f5d8f079035790b92207"
+        ),
+        "liblantern" = sprintf("https://storage.googleapis.com/torch-lantern-builds/refs/heads/%s/latest/Linux-rocm-52.zip", branch)
       )
     )
   )
@@ -277,6 +307,18 @@ nvcc_version_from_path <- function(nvcc) {
   gsub(".*release |, V.*", "", nvcc[grepl("release", nvcc)])
 }
 
+hipcc_version_from_path <- function(hipcc) {
+  suppressWarnings(
+    hipcc <- tryCatch(system2(hipcc, "--version", stdout = TRUE, stderr = TRUE), error = function(e) NULL)
+  )
+
+  if (is.null(hipcc) || !any(grepl("version:", hipcc))) {
+    return(NULL)
+  }
+
+  gsub(".*version: |\\.\\d+-.*", "", hipcc[grepl("version:", hipcc)])
+}
+
 #' @keywords internal
 install_type <- function(version) {
   if (nzchar(Sys.getenv("CUDA"))) {
@@ -326,18 +368,48 @@ install_type <- function(version) {
     cuda_version <- nvcc_version_from_path("nvcc")
   }
 
-  if (is.null(cuda_version)) {
+  # Detect rocm version on Linux
+  rocm_version <- NULL
+
+  # Query hipcc from environment PATH.
+  if (is.null(rocm_version)) {
+    hipcc_path <- system("which hipcc", intern = T)
+    rocm_version <- hipcc_version_from_path(hipcc_path)
+  }
+  
+  # Query hipcc from conventional location
+  if (is.null(rocm_version)) {
+    rocm_version <- hipcc_version_from_path("/opt/rocm/bin/hipcc")
+  }
+  
+  if (is.null(rocm_version)) {
+    rocm_version <- hipcc_version_from_path("hipcc")
+  }
+  
+  # no version detected
+  if (is.null(cuda_version) && is.null(rocm_version)) {
     return("cpu")
   }
 
   versions_available <- names(install_config[[version]])
+  cuda_version_available <- gsub("CUDA ", "", grep("CUDA ", versions_available, value = TRUE))
+  rocm_version_available <- gsub("ROCm ", "", grep("ROCm ", versions_available, value = TRUE))
 
-  if (!cuda_version %in% versions_available) {
-    message("Cuda ", cuda_version, " detected but torch only supports: ", paste(versions_available, collapse = ", "))
-    return("cpu")
+  # One of Cuda version or ROCm version exists. Check it is supported or fallback to CPU
+  if (!is.null(cuda_version)) {
+    if (!cuda_version %in% cuda_version_available) {
+      message("Cuda ", cuda_version, " detected but torch only supports: ", paste(versions_available, collapse = ", "))
+      return("cpu")
+    }
+  } else {
+    if (!rocm_version %in% rocm_version_available) {
+      message("ROCm ", rocm_version, " detected but torch only supports: ", paste(versions_available, collapse = ", "))
+      return("cpu")
+    }
   }
-
-  cuda_version
+  
+  # either ROCm or Cuda version will be NULL, so we can append to get which is not
+  append(cuda_version, rocm_version)
 }
 
 #' Install Torch

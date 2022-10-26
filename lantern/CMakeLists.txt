@@ -116,7 +116,11 @@ elseif(UNIX)
             add_compile_definitions(CUDA113)
             retrieve_lib("https://download.pytorch.org/libtorch/cu116/libtorch-cxx11-abi-shared-with-deps-1.12.1%2Bcu116.zip" "libtorch")
         elseif(HIP_FOUND)
+            add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
             add_compile_definitions(ROCM)
+            find_package(ROCM REQUIRED)
+            set(CMAKE_C_COMPILER "${ROCM_PATH}" /llvm/bin/clang)
+            set(CMAKE_CXX_COMPILER "${ROCM_PATH}" /llvm/bin/clang++)
             retrieve_lib("https://download.pytorch.org/libtorch/rocm5.1.1/libtorch-cxx11-abi-shared-with-deps-1.12.1%2Brocm5.1.1.zip" "libtorch")
         else()
             retrieve_lib("https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-1.12.1%2Bcpu.zip" "libtorch")
@@ -187,7 +191,7 @@ if(APPLE)
   endif()
 endif()
 
-if(DEFINED ENV{CUDA} AND NOT '$ENV{CUDA}' STREQUAL '')
+if((DEFINED ENV{CUDA} AND NOT '$ENV{CUDA}' STREQUAL '') OR HIP_FOUND)
  
   set(LANTERN_SRC 
       ${LANTERN_SRC} 
@@ -197,6 +201,14 @@ if(DEFINED ENV{CUDA} AND NOT '$ENV{CUDA}' STREQUAL '')
   )
   
   set_source_files_properties(src/Cuda.cpp PROPERTIES COMPILE_DEFINITIONS __NVCC__)
+  
+  if (HIP_FOUND)
+    find_package(rocBLAS REQUIRED)
+    find_package(hipFFT REQUIRED)
+    find_package(hipRAND REQUIRED)
+    find_package(hipSPARSE REQUIRED)
+  endif()
+
   add_library(lantern SHARED ${LANTERN_SRC})
 
   if (WIN32)  
