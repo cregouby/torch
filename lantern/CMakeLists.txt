@@ -39,15 +39,15 @@ if (DEFINED ENV{CUDA} AND NOT '$ENV{CUDA}' STREQUAL '')
 endif()
 
 ## ROCm based on https://github.com/ROCm-Developer-Tools/HIP/tree/master/samples/2_Cookbook/12_cmake_hip_add_executable#including-findhip-cmake-module-in-the-project
-if(NOT DEFINED HIP_PATH)
-    if(NOT DEFINED ENV{HIP_PATH})
-        set(HIP_PATH "/opt/rocm/hip" CACHE PATH "Path to which HIP has been installed")
+if(NOT DEFINED ROCM_PATH)
+    if(NOT DEFINED ENV{ROCM_PATH})
+        set(ROCM_PATH "/opt/rocm" CACHE PATH "Path to which ROCm has been installed")
     else()
-        set(HIP_PATH $ENV{HIP_PATH} CACHE PATH "Path to which HIP has been installed")
+        set(ROCM_PATH $ENV{ROCM_PATH} CACHE PATH "Path to which ROCm has been installed")
     endif()
 endif()
-set(CMAKE_MODULE_PATH "${HIP_PATH}/cmake" ${CMAKE_MODULE_PATH})
-find_package(HIP QUIET)
+set(CMAKE_MODULE_PATH "${ROCM_PATH}/lib/cmake" ${CMAKE_MODULE_PATH})
+find_package(ROCM QUIET)
 
 
 if(APPLE)
@@ -202,11 +202,12 @@ if((DEFINED ENV{CUDA} AND NOT '$ENV{CUDA}' STREQUAL '') OR HIP_FOUND)
   
   set_source_files_properties(src/Cuda.cpp PROPERTIES COMPILE_DEFINITIONS __NVCC__)
   
-  if (HIP_FOUND)
+  if (ROCM_FOUND)
+    message("-- Using ROCm")
     find_package(rocBLAS REQUIRED)
-    find_package(hipFFT REQUIRED)
-    find_package(hipRAND REQUIRED)
-    find_package(hipSPARSE REQUIRED)
+    find_package(rocFFT REQUIRED)
+    find_package(rocRAND REQUIRED)
+    find_package(rocSPARSE REQUIRED)
   endif()
 
   add_library(lantern SHARED ${LANTERN_SRC})
