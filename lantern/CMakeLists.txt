@@ -39,15 +39,15 @@ if (DEFINED ENV{CUDA} AND NOT '$ENV{CUDA}' STREQUAL '')
 endif()
 
 ## ROCm based on https://github.com/ROCm-Developer-Tools/HIP/tree/master/samples/2_Cookbook/12_cmake_hip_add_executable#including-findhip-cmake-module-in-the-project
-if(NOT DEFINED ROCM_PATH)
-    if(NOT DEFINED ENV{ROCM_PATH})
-        set(ROCM_PATH "/opt/rocm" CACHE PATH "Path to which ROCm has been installed")
+if(NOT DEFINED HIP_PATH)
+    if(NOT DEFINED ENV{HIP_PATH})
+        set(HIP_PATH "/opt/rocm/hip" CACHE PATH "Path to which HIP has been installed")
     else()
-        set(ROCM_PATH $ENV{ROCM_PATH} CACHE PATH "Path to which ROCm has been installed")
+        set(HIP_PATH $ENV{HIP_PATH} CACHE PATH "Path to which HIP has been installed")
     endif()
 endif()
-set(CMAKE_MODULE_PATH "${ROCM_PATH}/lib/cmake" ${CMAKE_MODULE_PATH})
-find_package(ROCM QUIET)
+set(CMAKE_MODULE_PATH "${HIP_PATH}/cmake" ${CMAKE_MODULE_PATH})
+find_package(HIP QUIET)
 
 
 if(APPLE)
@@ -119,9 +119,8 @@ elseif(UNIX)
             add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
             add_compile_definitions(ROCM)
             find_package(ROCM REQUIRED)
-            set(CMAKE_C_COMPILER "${ROCM_PATH}" /llvm/bin/clang)
-            set(CMAKE_CXX_COMPILER "${ROCM_PATH}" /llvm/bin/clang++)
-            retrieve_lib("https://download.pytorch.org/libtorch/rocm5.1.1/libtorch-cxx11-abi-shared-with-deps-1.12.1%2Brocm5.1.1.zip" "libtorch")
+            set(CMAKE_CXX_COMPILER "${HIP_PATH}/bin/hipcc" )
+            retrieve_lib("https://download.pytorch.org/libtorch/nightly/rocm5.2/libtorch-cxx11-abi-shared-with-deps-latest.zip" "libtorch")
         else()
             retrieve_lib("https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-1.12.1%2Bcpu.zip" "libtorch")
         endif()
@@ -191,7 +190,7 @@ if(APPLE)
   endif()
 endif()
 
-if((DEFINED ENV{CUDA} AND NOT '$ENV{CUDA}' STREQUAL '') OR HIP_FOUND)
+if(DEFINED ENV{CUDA} AND NOT '$ENV{CUDA}' STREQUAL '')
  
   set(LANTERN_SRC 
       ${LANTERN_SRC} 
@@ -202,14 +201,6 @@ if((DEFINED ENV{CUDA} AND NOT '$ENV{CUDA}' STREQUAL '') OR HIP_FOUND)
   
   set_source_files_properties(src/Cuda.cpp PROPERTIES COMPILE_DEFINITIONS __NVCC__)
   
-  if (ROCM_FOUND)
-    message("-- Using ROCm")
-    find_package(rocBLAS REQUIRED)
-    find_package(rocFFT REQUIRED)
-    find_package(rocRAND REQUIRED)
-    find_package(rocSPARSE REQUIRED)
-  endif()
-
   add_library(lantern SHARED ${LANTERN_SRC})
 
   if (WIN32)  
@@ -220,6 +211,15 @@ if((DEFINED ENV{CUDA} AND NOT '$ENV{CUDA}' STREQUAL '') OR HIP_FOUND)
   endif()
   
 else()
+  if (HIP_FOUND)
+    message("-- Using HIP for ROCm")
+    find_package(rocBLAS REQUIRED)
+    find_package(hipFFT REQUIRED)
+    find_package(hipRAND REQUIRED)
+    find_package(hipSPARSE REQUIRED)
+    find_package(rocTHRUST REQUIRED)
+  endif()
+
   set(LANTERN_SRC 
       ${LANTERN_SRC} 
       src/Contrib/SortVertices/sort_vert_cpu.cpp
