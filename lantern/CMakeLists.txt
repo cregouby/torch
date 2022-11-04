@@ -211,6 +211,11 @@ if(DEFINED ENV{CUDA} AND NOT '$ENV{CUDA}' STREQUAL '')
   endif()
   
 else()
+  set(LANTERN_SRC 
+      ${LANTERN_SRC} 
+      src/Contrib/SortVertices/sort_vert_cpu.cpp
+  )
+  add_library(lantern SHARED ${LANTERN_SRC})
   if (HIP_FOUND)
     message("-- Using HIP for ROCm")
     find_package(rocBLAS REQUIRED)
@@ -218,13 +223,8 @@ else()
     find_package(hipRAND REQUIRED)
     find_package(hipSPARSE REQUIRED)
     find_package(rocTHRUST REQUIRED)
+    set_property(TARGET lantern PROPERTY HIP_STANDARD 17)
   endif()
-
-  set(LANTERN_SRC 
-      ${LANTERN_SRC} 
-      src/Contrib/SortVertices/sort_vert_cpu.cpp
-  )
-  add_library(lantern SHARED ${LANTERN_SRC})
 endif()
 
 add_library(lantern::library ALIAS lantern)
