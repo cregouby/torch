@@ -52,7 +52,7 @@ jobs:
           - {
               os: ubuntu-20.04,
               artifact: "build/liblantern.so",
-              upload: "Linux-ROCm-511",
+              upload: "Linux-ROCm-51",
               rocm: "5.1.1",
               fixlib: "chrpath -r '$ORIGIN/.' liblantern.so",
               container: "ubuntu:18.04",
@@ -180,11 +180,11 @@ jobs:
       - name: Install ROCm
         if: ${{matrix.config.rocm != '' && contains(matrix.config.os, 'ubuntu') }}
         run: |
-          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl libnuma-dev gnupg 
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl libnuma-dev gnupg build-essential
           curl -sL http://repo.radeon.com/rocm/apt/debian/rocm.gpg.key | apt-key add - 
           printf "deb [arch=amd64] http://repo.radeon.com/rocm/apt/debian/ xenial main" | tee /etc/apt/sources.list.d/rocm.list
           apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends sudo libelf1 rocm-dev build-essential
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends sudo libelf1 rocm-dev rocrand-dev hipfft-dev rocfft-dev hipsparse-dev rothrust-dev miopen-hip-dev
           apt-get clean
           rm -rf /var/lib/apt/lists/*
 
@@ -284,7 +284,7 @@ jobs:
             hw: gpu
             version: -116
           - name: ROCm51
-            artifact: Linux-ROCm-511
+            artifact: Linux-ROCm-51
             upload: Linux
             hw: gpu
     steps:
