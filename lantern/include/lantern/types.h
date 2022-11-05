@@ -6,7 +6,7 @@ template <class... T>
 std::vector<void*> to_vector(std::tuple<T...> x) {
   std::vector<void*> out;
   out.reserve(sizeof...(T));
-  torch::apply(
+  std::apply(
       [&out](auto&&... args) {
         ((out.push_back(new std::remove_reference_t<decltype(args)>(
              std::forward<decltype(args)>(args)))),

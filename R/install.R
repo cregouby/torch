@@ -279,20 +279,21 @@ install_type_windows <- function(version) {
   if (nzchar(cuda_path) && is.null(cuda_version)) {
     nvcc_path <- file.path(cuda_path, "bin", "nvcc.exe")
     cuda_version <- nvcc_version_from_path(nvcc_path)
+    cuda_type <- paste0("CUDA ", cuda_version)
   }
 
   if (is.null(cuda_version)) {
     return("cpu")
   }
 
-  versions_available <- names(install_config[[version]])
+  types_available <- names(install_config[[version]])
 
-  if (!cuda_version %in% versions_available) {
-    message("Cuda ", cuda_version, " detected but torch only supports: ", paste(versions_available, collapse = ", "))
+  if (cuda_type %in% types_available) {
+    return(cuda_type)
+  } else {
+    message(cuda_type, " detected but torch version ",version," only supports: ", paste(types_available, collapse = ", "))
     return("cpu")
   }
-
-  cuda_version
 }
 
 nvcc_version_from_path <- function(nvcc) {
@@ -368,6 +369,10 @@ install_type <- function(version) {
     cuda_version <- nvcc_version_from_path("nvcc")
   }
 
+  if (!is.null(cuda_version)) {
+    cuda_type <- paste0("CUDA ",cuda_version)
+  }
+
   # Detect rocm version on Linux
   rocm_version <- NULL
 
@@ -386,30 +391,35 @@ install_type <- function(version) {
     rocm_version <- hipcc_version_from_path("hipcc")
   }
   
+  if (!is.null(rocm_version)) {
+    rocm_type <- paste0("ROCm ",rocm_version)
+  }
+  
   # no version detected
   if (is.null(cuda_version) && is.null(rocm_version)) {
     return("cpu")
   }
 
-  versions_available <- names(install_config[[version]])
-  cuda_version_available <- gsub("CUDA ", "", grep("CUDA ", versions_available, value = TRUE))
-  rocm_version_available <- gsub("ROCm ", "", grep("ROCm ", versions_available, value = TRUE))
+  types_available <- names(install_config[[version]])
+  cuda_type_available <- grep("CUDA ", types_available, value = TRUE)
+  rocm_type_available <- grep("ROCm ", types_available, value = TRUE)
 
-  # One of Cuda version or ROCm version exists. Check it is supported or fallback to CPU
+  # One of CUDA or ROCm type exists. Check it is supported or fallback to CPU
   if (!is.null(cuda_version)) {
-    if (!cuda_version %in% cuda_version_available) {
-      message("Cuda ", cuda_version, " detected but torch only supports: ", paste(versions_available, collapse = ", "))
+    if (cuda_type %in% cuda_type_available) {
+      return(cuda_type)
+    } else {
+      message(cuda_type, " detected but torch version ",version," only supports: ", paste(types_available, collapse = ", "))
       return("cpu")
     }
   } else {
-    if (!rocm_version %in% rocm_version_available) {
-      message("ROCm ", rocm_version, " detected but torch only supports: ", paste(versions_available, collapse = ", "))
+    if (rocm_type %in% rocm_type_available) {
+      return(rocm_type)
+    } else {
+      message(rocm_type, " detected but torch version ",version," only supports: ", paste(types_available, collapse = ", "))
       return("cpu")
     }
   }
-  
-  # either ROCm or Cuda version will be NULL, so we can append to get which is not
-  append(cuda_version, rocm_version)
 }
 
 #' Install Torch

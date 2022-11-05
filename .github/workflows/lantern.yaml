@@ -52,8 +52,8 @@ jobs:
           - {
               os: ubuntu-20.04,
               artifact: "build/liblantern.so",
-              upload: "Linux-ROCm-51",
-              rocm: "5.1.1",
+              upload: "Linux-ROCm-52",
+              rocm: "5.2.3",
               fixlib: "chrpath -r '$ORIGIN/.' liblantern.so",
               container: "ubuntu:18.04",
             }
@@ -230,7 +230,7 @@ jobs:
             NonABICuda113,
             WindowsCuda113,
             Cuda116,
-            ROCm51,
+            ROCm52,
           ]
         include:
           - name: macOS
@@ -283,8 +283,8 @@ jobs:
             upload: Linux
             hw: gpu
             version: -116
-          - name: ROCm51
-            artifact: Linux-ROCm-51
+          - name: ROCm52
+            artifact: Linux-ROCm-52
             upload: Linux
             hw: gpu
     steps:
