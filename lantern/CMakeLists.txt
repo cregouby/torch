@@ -119,9 +119,9 @@ elseif(UNIX)
             add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
             add_compile_definitions(ROCM)
             find_package(ROCM REQUIRED)
-            set(CMAKE_CXX_COMPILER "${HIP_PATH}/../bin/amdclang++")
-            set(rocm-path "${HIP_PATH}")
-            set(hip-link "${HIP_PATH}/bin/hipcc")
+            # -- may require merge w part of https://github.com/pytorch/pytorch/blob/fbd08fb358b643386edd4dd28b9c747aab4ba8c1/cmake/Dependencies.cmake
+            # set(CMAKE_CXX_COMPILER "${HIP_PATH}/../bin/amdclang++")
+            set(CMAKE_CXX_COMPILER "${HIP_PATH}/bin/hipcc")
             file(GLOB HIP_CLANGRT_LIB_SEARCH_PATHS "${CMAKE_HIP_COMPILER}/../lib/clang/*/lib/*")
             find_library(CLANGRT_BUILTINS
                 NAMES
@@ -239,11 +239,16 @@ else()
     find_package(hipRAND REQUIRED)
     find_package(hipSPARSE REQUIRED)
     find_package(rocTHRUST REQUIRED)
-    set_property(TARGET lantern PROPERTY HIP_STANDARD_REQUIRED ON)
-    set_property(TARGET lantern PROPERTY HIP_STANDARD 17)
+
+    caffe2_update_option(USE_ROCM OFF)
+    list(APPEND Caffe2_PUBLIC_HIP_DEPENDENCY_LIBS roc::rocblas hip::hipfft hip::hiprand roc::hipsparse)
+    add_definitions(-DROCM_VERSION=${ROCM_VERSION_DEV_INT})
+    add_definitions(-DTORCH_HIP_VERSION=${TORCH_HIP_VERSION})
+    message("TORCH_HIP_VERSION=${TORCH_HIP_VERSION} is added as a compiler defines")
+    
+    set(CMAKE_CXX_STANDARD 17)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -stdlib=libc++")
     set_source_files_properties(src/Cuda.cpp PROPERTIES COMPILE_DEFINITIONS __HIPCC__)
-    get_target_property(HIP_STANDARD lantern HIP_STANDARD)
-    message("-- Using HIP standard ${HIP_STANDARD}")
   endif()
 endif()
 
