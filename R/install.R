@@ -95,7 +95,7 @@ install_config <- list(
         "libtorch" = list(
           path = "libtorch/",
           url = "https://download.pytorch.org/libtorch/nightly/rocm5.2/libtorch-cxx11-abi-shared-with-deps-latest.zip",
-          md5hash = "7378b7978a632852322dee258961edc4"
+          md5hash = "e40b4e526197310296c992256de3bd9b"
         ),
         "liblantern" = sprintf("https://storage.googleapis.com/torch-lantern-builds/refs/heads/%s/latest/Linux-rocm-52.zip", branch)
       )
@@ -105,7 +105,7 @@ install_config <- list(
         "libtorch" = list(
           path = "libtorch/",
           url = "https://download.pytorch.org/libtorch/nightly/rocm5.3/libtorch-cxx11-abi-shared-with-deps-latest.zip",
-          md5hash = "e40b4e526197310296c992256de3bd9b"
+          md5hash = "61fb206aecf076aa4afc3422fdbcc8ba"
         ),
         "liblantern" = sprintf("https://storage.googleapis.com/torch-lantern-builds/refs/heads/%s/latest/Linux-rocm-53.zip", branch)
       )

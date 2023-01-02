@@ -113,16 +113,24 @@ elseif(UNIX)
             add_compile_definitions(CUDA113)
             retrieve_lib("https://download.pytorch.org/libtorch/cu113/libtorch-cxx11-abi-shared-with-deps-1.12.1%2Bcu113.zip" "libtorch")
         elseif(DEFINED ENV{CUDA} AND '$ENV{CUDA}' STREQUAL '11.6')
-            add_compile_definitions(CUDA113)
+            add_compile_definitions(CUDA116)
             retrieve_lib("https://download.pytorch.org/libtorch/cu116/libtorch-cxx11-abi-shared-with-deps-1.12.1%2Bcu116.zip" "libtorch")
         elseif(HIP_FOUND)
             add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
             add_compile_definitions(ROCM)
             find_package(ROCM REQUIRED)
             # -- may require merge w part of https://github.com/pytorch/pytorch/blob/fbd08fb358b643386edd4dd28b9c747aab4ba8c1/cmake/Dependencies.cmake
+            # this leads to error at make time on  [ 31%] Building CXX object CMakeFiles/lantern.dir/src/TensorList.cpp.o
+            # /home/creg/R/_packages/torch/lantern/tests/main.cpp:1:10: fatal error: 'fstream' file not found  
             # set(CMAKE_CXX_COMPILER "${HIP_PATH}/../bin/amdclang++")
-            set(CMAKE_CXX_COMPILER "${HIP_PATH}/bin/hipcc")
-            file(GLOB HIP_CLANGRT_LIB_SEARCH_PATHS "${CMAKE_HIP_COMPILER}/../lib/clang/*/lib/*")
+
+            # this leads to error at make time on  [ 36%] Building CXX object CMakeFiles/lantern.dir/src/Dimname.cpp.o                                                     
+            # In file included from <built-in>:1:                                                                                     
+            # /opt/rocm-5.3.3/llvm/lib/clang/15.0.0/include/__clang_hip_runtime_wrapper.h:50:10: fatal error: 'cmath' file not foundIn file included from <built-in>
+            # set(CMAKE_CXX_COMPILER "${HIP_PATH}/../bin/hipcc")
+            
+            set(CMAKE_CXX_COMPILER "/usr/lib/aomp/bin/hipcc")
+            file(GLOB HIP_CLANGRT_LIB_SEARCH_PATHS "${HIP_PATH}/*/lib/*")
             find_library(CLANGRT_BUILTINS
                 NAMES
                   clang_rt.builtins
@@ -130,13 +138,26 @@ elseif(UNIX)
                 PATHS
                   ${HIP_CLANGRT_LIB_SEARCH_PATHS}
                   ${HIP_CLANG_INCLUDE_PATH}/../lib/linux)
-            if(ROCM_VERSION_DEV VERSION_EQUAL "5.3.0")
-                message(FATAL_ERROR, "ROCm 5.3 is no supported yet")
-            elseif(ROCM_VERSION_DEV VERSION_EQUAL "5.2.0")
-                retrieve_lib("https://download.pytorch.org/libtorch/nightly/rocm5.2/libtorch-cxx11-abi-shared-with-deps-latest.zip" "libtorch")
-            elseif(ROCM_VERSION_DEV VERSION_LESS_EQUAL "5.1.0")
-                retrieve_lib("https://download.pytorch.org/libtorch/rocm5.1.1/libtorch-cxx11-abi-shared-with-deps-1.12.1%2Brocm5.1.1.zip" "libtorch")
-            endif()
+            list(APPEND CMAKE_PREFIX_PATH "/opt/rocm/lib/cmake/rocblas")
+            list(APPEND CMAKE_PREFIX_PATH "/opt/rocm/lib/cmake/hipfft")
+            list(APPEND CMAKE_PREFIX_PATH "/opt/rocm/lib/cmake/hiprand")
+            list(APPEND CMAKE_PREFIX_PATH "/opt/rocm/lib/cmake/hipsparse")
+            list(APPEND CMAKE_PREFIX_PATH "/opt/rocm/lib/cmake/rocthrust")
+            message("from HIP_PATH we get CMAKE_CXX_COMPILER: (${HIP_PATH}) : ${CMAKE_CXX_COMPILER}")
+            message("now using CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
+            message("now using CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
+            message("now using HIP_CLANGRT_LIB_SEARCH_PATHS: ${HIP_CLANGRT_LIB_SEARCH_PATHS}")
+            message("detected ROCM_VERSION_DEV: ${ROCM_VERSION_DEV}")
+
+            if(ROCM_VERSION_DEV_MAJOR VERSION_EQUAL "5")
+              if(ROCM_VERSION_DEV_MINOR VERSION_EQUAL "3")
+                retrieve_lib("https://download.pytorch.org/libtorch/nightly/rocm5.3/libtorch-cxx11-abi-shared-with-deps-latest.zip" "libtorch")
+              elseif(ROCM_VERSION_DEV_MINOR VERSION_EQUAL "2")
+                  retrieve_lib("https://download.pytorch.org/libtorch/nightly/rocm5.2/libtorch-cxx11-abi-shared-with-deps-latest.zip" "libtorch")
+              elseif(ROCM_VERSION_DEV_MINOR VERSION_EQUAL "1")
+                  retrieve_lib("https://download.pytorch.org/libtorch/rocm5.1.1/libtorch-cxx11-abi-shared-with-deps-1.12.1%2Brocm5.1.1.zip" "libtorch")
+              endif()
+           endif()
         else()
             retrieve_lib("https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-1.12.1%2Bcpu.zip" "libtorch")
         endif()
@@ -211,8 +232,8 @@ if(DEFINED ENV{CUDA} AND NOT '$ENV{CUDA}' STREQUAL '')
   set(LANTERN_SRC 
       ${LANTERN_SRC} 
       src/AllocatorCuda.cpp
-      src/Contrib/SortVertices/sort_vert_kernel.cu
       src/Contrib/SortVertices/sort_vert.cpp
+      src/Contrib/SortVertices/sort_vert_kernel.cu
   )
   
   set_source_files_properties(src/Cuda.cpp PROPERTIES COMPILE_DEFINITIONS __NVCC__)
@@ -235,9 +256,13 @@ else()
   if (HIP_FOUND)
     message("-- Using HIP for ROCm ${ROCM_VERSION_DEV}")
     find_package(rocBLAS REQUIRED)
+    target_link_libraries(roc::rocblas)
     find_package(hipFFT REQUIRED)
+    target_link_libraries(hip::hipfft)
     find_package(hipRAND REQUIRED)
+    target_link_libraries(hip::hiprand)
     find_package(hipSPARSE REQUIRED)
+    target_link_libraries(roc::hipsparse)
     find_package(rocTHRUST REQUIRED)
 
     caffe2_update_option(USE_ROCM OFF)
@@ -246,17 +271,15 @@ else()
     add_definitions(-DTORCH_HIP_VERSION=${TORCH_HIP_VERSION})
     message("TORCH_HIP_VERSION=${TORCH_HIP_VERSION} is added as a compiler defines")
     
-    set(CMAKE_CXX_STANDARD 17)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -stdlib=libc++")
+    # set(CMAKE_CXX_STANDARD 17)
+    # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -stdlib=libc++")
     set_source_files_properties(src/Cuda.cpp PROPERTIES COMPILE_DEFINITIONS __HIPCC__)
   endif()
 endif()
 
 add_library(lantern::library ALIAS lantern)
 
-target_include_directories(lantern PUBLIC
-    ${PROJECT_SOURCE_DIR}/include
-)
+target_include_directories(lantern PUBLIC ${PROJECT_SOURCE_DIR}/include)
 
 target_link_libraries(lantern ${TORCH_LIBRARIES})
 
