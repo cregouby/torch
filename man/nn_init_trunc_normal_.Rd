@@ -22,8 +22,6 @@ Fills the input Tensor with values drawn from a truncated
 normal distribution.
 }
 \examples{
-if (torch_is_installed()) {
 w <- torch_empty(3, 5)
 nn_init_trunc_normal_(w)
-}
 }

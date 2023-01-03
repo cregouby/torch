@@ -27,7 +27,6 @@ will slow down your program execution.
 }
 
 \examples{
-if (torch_is_installed()) {
 x <- torch_randn(2, requires_grad = TRUE)
 y <- torch_randn(1)
 b <- (x^y)$sum()
@@ -40,5 +39,4 @@ try({
     b$backward()
   })
 })
-}
 }

@@ -133,7 +133,7 @@ elseif(UNIX)
             # set(CMAKE_CXX_COMPILER "${HIP_PATH}/../bin/hipcc")
             
             set(CMAKE_CXX_COMPILER "/usr/lib/aomp/bin/hipcc")
-            file(GLOB HIP_CLANGRT_LIB_SEARCH_PATHS "${HIP_PATH}/*/lib/*")
+            file(GLOB HIP_CLANGRT_LIB_SEARCH_PATHS "${HIP_PATH}/../../*/lib/*")
             find_library(CLANGRT_BUILTINS
                 NAMES
                   clang_rt.builtins
@@ -141,11 +141,13 @@ elseif(UNIX)
                 PATHS
                   ${HIP_CLANGRT_LIB_SEARCH_PATHS}
                   ${HIP_CLANG_INCLUDE_PATH}/../lib/linux)
+            list(APPEND CMAKE_PREFIX_PATH "/usr/lib/aomp/lib/cmake/hip/")
             list(APPEND CMAKE_PREFIX_PATH "/opt/rocm/lib/cmake/rocblas")
             list(APPEND CMAKE_PREFIX_PATH "/opt/rocm/lib/cmake/hipfft")
             list(APPEND CMAKE_PREFIX_PATH "/opt/rocm/lib/cmake/hiprand")
             list(APPEND CMAKE_PREFIX_PATH "/opt/rocm/lib/cmake/hipsparse")
             list(APPEND CMAKE_PREFIX_PATH "/opt/rocm/lib/cmake/rocthrust")
+            list(APPEND CMAKE_PREFIX_PATH "/opt/rocm/lib/cmake/rocprim")
             message("from HIP_PATH we get CMAKE_CXX_COMPILER: (${HIP_PATH}) : ${CMAKE_CXX_COMPILER}")
             message("now using CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
             message("now using CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
@@ -268,7 +270,7 @@ else()
     target_link_libraries(roc::hipsparse)
     find_package(rocTHRUST REQUIRED)
 
-    caffe2_update_option(USE_ROCM OFF)
+    # caffe2_update_option(USE_ROCM OFF)
     list(APPEND Caffe2_PUBLIC_HIP_DEPENDENCY_LIBS roc::rocblas hip::hipfft hip::hiprand roc::hipsparse)
     add_definitions(-DROCM_VERSION=${ROCM_VERSION_DEV_INT})
     add_definitions(-DTORCH_HIP_VERSION=${TORCH_HIP_VERSION})

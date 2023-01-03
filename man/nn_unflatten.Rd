@@ -17,7 +17,6 @@ Unflattens a tensor dim expanding it to a desired shape.
 For use with [\link{nn_sequential}.
 }
 \examples{
-if (torch_is_installed()) {
 input <- torch_randn(2, 50)
 
 m <- nn_sequential(
@@ -26,5 +25,4 @@ m <- nn_sequential(
 )
 output <- m(input)
 output$size()
-}
 }

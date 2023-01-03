@@ -40,9 +40,7 @@ dimensions
 }
 
 \examples{
-if (torch_is_installed()) {
 m <- nn_hardtanh(-2, 2)
 input <- torch_randn(2)
 output <- m(input)
-}
 }

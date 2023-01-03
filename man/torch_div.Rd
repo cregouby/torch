@@ -69,7 +69,6 @@ by zero leads to undefined behavior.
 }
 
 \examples{
-if (torch_is_installed()) {
 
 a = torch_randn(c(5))
 a
@@ -81,5 +80,4 @@ a
 b = torch_randn(c(4))
 b
 torch_div(a, b)
-}
 }

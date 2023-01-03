@@ -21,7 +21,6 @@ as a sequential embedding module.
 }
 \examples{
 if (torch_is_installed()) {
-if (torch_is_installed()) {
 x <- nn_sequential(
   nn_relu(),
   nn_tanh(),
@@ -34,6 +33,5 @@ x <- nn_sequential(
 )  
 prune <- nn_prune_head(x, 3)
 prune
-}
 }
 }
