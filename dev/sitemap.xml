@@ -193,9 +193,6 @@
     <loc>https://torch.mlverse.org/docs/dev/reference/enumerate.html</loc>
   </url>
   <url>
-    <loc>https://torch.mlverse.org/docs/dev/reference/get_install_libs_url.html</loc>
-  </url>
-  <url>
     <loc>https://torch.mlverse.org/docs/dev/reference/index.html</loc>
   </url>
   <url>
@@ -1403,6 +1400,9 @@
   </url>
   <url>
     <loc>https://torch.mlverse.org/docs/dev/reference/torch_fft_fft.html</loc>
+  </url>
+  <url>
+    <loc>https://torch.mlverse.org/docs/dev/reference/torch_fft_fftfreq.html</loc>
   </url>
   <url>
     <loc>https://torch.mlverse.org/docs/dev/reference/torch_fft_ifft.html</loc>
