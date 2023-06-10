@@ -42,7 +42,7 @@ nn_Module <- R6::R6Class(
           private$non_persistent_buffers_ != name
         ]
       } else {
-        private$non_persistent_buffers <- unique(c(
+        private$non_persistent_buffers_ <- unique(c(
           private$non_persistent_buffers_,
           name
         ))
@@ -134,10 +134,10 @@ nn_Module <- R6::R6Class(
           out[[paste0(prefix, param_name)]] <- keepvars_or_detach(param, keepvars)
         }
       }
-
+      
       for (buf_name in names(private$buffers_)) {
         buf <- private$buffers_[[buf_name]]
-        if (!is.null(buf) && !buf_name %in% private$non_persistent_buffers_) {
+        if (!is.null(buf) && !(buf_name %in% private$non_persistent_buffers_)) {
           out[[paste0(prefix, buf_name)]] <- keepvars_or_detach(buf, keepvars)
         }
       }
@@ -170,16 +170,31 @@ nn_Module <- R6::R6Class(
         if (key %in% names(state_dict)) {
           input_param <- state_dict[[key]]
           param <- local_state[[name]]
-          with_no_grad({
-            param$copy_(input_param)
-          })
+          if (!self$..refer_to_state_dict..) {
+            with_no_grad({
+              param$copy_(input_param)
+            })  
+          } else {
+            if (name %in% names(persistent_buffers)) {
+              private$buffers_[[name]] <- input_param$requires_grad_(param$requires_grad)
+            } else {
+              private$parameters_[[name]] <- input_param$requires_grad_(param$requires_grad)
+            }
+          }
         } else {
           value_error("Could not find {key} in the state_dict.")
         }
       }
     },
-    load_state_dict = function(state_dict) {
+    load_state_dict = function(state_dict, ..., .refer_to_state_dict = FALSE) {
+      # by default the state dict parameter values are copied into the parameters
+      # of the modules. with `.refer_to_state_dict` you can make the parameters
+      # refer to the tensors in the state dict. USE WITH CAUTION as it's easy to
+      # mess up and link the parametrs of two models that way. This is useful when
+      # you want to initialize the model with the state dict values and will dispose
+      # of the state dict rightly after.
       load <- function(module, state_dict, prefix = "") {
+        module$..refer_to_state_dict.. <- .refer_to_state_dict
         module$.load_from_state_dict(state_dict, prefix)
         for (nm in names(module$.__enclos_env__$private$modules_)) {
           child <- module$.__enclos_env__$private$modules_[[nm]]
@@ -220,6 +235,26 @@ nn_Module <- R6::R6Class(
         self$buffers
       } else {
         private$buffers_
+      }
+    },
+    .replace_values_from_table = function(table) {
+      for (i in seq_along(private$modules_)) {
+        module <- private$modules_[[i]]
+        private$modules_[[i]] <- table[[rlang::obj_address(module)]] %||% module
+      }
+      
+      lapply(private$modules_, function(x) x$.replace_values_from_table(table))
+      
+      for (i in seq_along(private$parameters_)) {
+        par <- private$parameters_[[i]]
+        # par or buf might not be available in `table` if, for some reason they
+        # have already been replaced. This happens for example, when a module 
+        # has the same layer twice. this also applies for modules, they might be duplicated 
+        private$parameters_[[i]] <- table[[xptr_address(par)]] %||% par
+      }
+      for (i in seq_along(private$buffers_)) {
+        buf <- private$buffers_[[i]]
+        private$buffers_[[i]] <- table[[xptr_address(buf)]] %||% buf
       }
     }
   ),
@@ -454,7 +489,7 @@ nn_module <- function(classname = NULL, inherit = nn_Module, ...,
     active = active,
     parent_env = e
   )
-
+  
   init <- get_init(Module)
 
   fun <- rlang::new_function(
@@ -474,6 +509,38 @@ create_nn_module_callable <- function(instance) {
 
   attr(f, "class") <- instance$.classes
   attr(f, "module") <- instance
+  rlang::env_binding_unlock(instance, "clone")
+  on.exit({lockBinding("clone", instance)}, add = TRUE)
+  clone <- instance$clone
+  instance$clone <- function(deep = FALSE, ..., replace_values = TRUE) {
+    if (deep && replace_values) {
+      state_dict <- append(instance$parameters, instance$buffers)
+      names(state_dict) <- sapply(state_dict, xptr_address)
+      
+      state_dict <- state_dict[!duplicated(names(state_dict))]
+      state_dict <- lapply(state_dict, function(x) x$detach()$clone())  
+      
+      # also need to append a clone of the modules to this list.
+      # child modules can be duplicated - and have the same name
+      # child modules are also deep cloned, but we don't need to replace
+      # their values when cloning because we only have to do it once.
+      children <- instance$children
+      names(children) <- sapply(children, rlang::obj_address)
+      children <- children[!duplicated(names(children))]
+      children <- lapply(children, function(x) x$clone(deep = deep, replace_values = FALSE))
+      
+      state_dict <- append(state_dict, children)
+    }
+    
+    cloned_instance <- clone(deep = deep)
+    
+    if (deep && replace_values) {
+      cloned_instance$.replace_values_from_table(state_dict)  
+    }
+    
+    cloned_instance
+  }
+  
   f
 }
 
@@ -701,7 +768,7 @@ nn_prune_head.nn_module <- nn_module(
 #' `nn_module` methods.
 #'
 #' @param modules a list of modules to add
-#'
+#' @seealso [nn_module_dict()]
 #' @examples
 #'
 #' my_module <- nn_module(
@@ -740,6 +807,36 @@ nn_module_list <- nn_module(
     }
   }
 )
+
+#' Container that allows named values
+#' 
+#' @param dict A named list of submodules that will be saved in that module.
+#' @examples
+#' nn_module <- nn_module(
+#'   initialize = function() {
+#'     self$dict <- nn_module_dict(list(
+#'       l1 = nn_linear(10, 20),
+#'       l2 = nn_linear(20, 10)
+#'     ))
+#'   },
+#'   forward = function(x) {
+#'     x <- self$dict$l1(x)
+#'     self$dict$l2(x)
+#'   }
+#' )
+#' @seealso [nn_module_list()]
+#' @export
+nn_module_dict <- nn_module(
+  initialize = function(dict) {
+    if (!rlang::is_named(dict)) cli::cli_abort("All elements in {.arg dict} must be named.")
+    for(nm in names(dict)) {
+      self[[nm]] <- dict[[nm]]
+    } 
+  },
+  forward = function(...) {
+    cli::cli_abort("{.fn nn_module_dict} has {.fn forward} implementation.")
+  }
+) 
 
 #' @export
 `[[.nn_module_list` <- function(x, y) {

@@ -303,10 +303,13 @@ nnf_glu <- function(input, dim = -1) {
 #' See \href{https://arxiv.org/abs/1606.08415}{Gaussian Error Linear Units (GELUs)}.
 #'
 #' @inheritParams nnf_elu
+#' @param approximate By default it's none, and applies element-wise x*pnorm(x),
+#'   if 'tanh', then GELU is estimated. See [GELU](https://arxiv.org/abs/1606.08415) for
+#'   more info.
 #'
 #' @export
-nnf_gelu <- function(input) {
-  torch_gelu(self = input)
+nnf_gelu <- function(input, approximate = "none") {
+  torch_gelu(self = input, approximate = approximate)
 }
 
 #' Prelu
@@ -800,4 +803,17 @@ nnf_contrib_sparsemax <- function(input, dim = -1) {
   ptr <- cpp_contrib_torch_sparsemax(input$ptr, dim)
 
   Tensor$new(ptr = ptr)
+}
+
+#' Applies the Sigmoid Linear Unit (SiLU) function, element-wise.
+#' See [nn_silu()] for more information.
+#' @seealso [nn_silu()].
+#' @inheritParams nnf_relu
+#' @export
+nnf_silu <- function(input, inplace = FALSE) {
+  if (inplace) {
+    torch_silu_(input)
+  } else {
+    torch_silu(input)
+  }
 }

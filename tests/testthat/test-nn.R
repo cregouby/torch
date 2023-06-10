@@ -659,3 +659,146 @@ test_that("make sure state_dict() is detached", {
   # we should keep the save value of requires grad bt in a detached graph
   expect_false(state_dict$bias$requires_grad)
 })
+
+test_that("deep cloning", {
+  
+  x <- nn_linear(1, 1)
+  y <- x$clone(deep = TRUE)
+  
+  expect_true(xptr_address(x$parameters$weight) != xptr_address(y$parameters$weight))
+  
+  
+  module <- nn_module(
+    initialize = function() {
+      self$x <- nn_parameter(torch_tensor(1))
+      self$y <- self$x
+      self$a <- nn_buffer(torch_tensor(1))
+      self$b <- self$a
+    }
+  )
+  
+  x <- module()
+  y <- x$clone(deep = TRUE)
+  
+  expect_true(xptr_address(x$x) != xptr_address(y$x))
+  expect_true(xptr_address(x$y) != xptr_address(y$y))
+  expect_true(xptr_address(y$x) == xptr_address(y$y))
+  
+  expect_true(xptr_address(x$a) != xptr_address(y$a))
+  expect_true(xptr_address(x$b) != xptr_address(y$b))
+  expect_true(xptr_address(y$a) == xptr_address(y$b))
+  
+  module <- nn_module(
+    initialize = function() {
+      self$x <- nn_linear(1, 1)
+      self$y <- self$x
+    }
+  )
+  
+  x <- module()
+  y <- x$clone(deep = TRUE)
+  expect_true(xptr_address(x$x$weight) != xptr_address(y$x$weight))
+  expect_true(xptr_address(x$y$weight) != xptr_address(y$y$weight))
+  expect_true(xptr_address(y$x$weight) == xptr_address(y$y$weight))
+  
+  expect_true(rlang::obj_address(x$x) != rlang::obj_address(y$x))
+  expect_true(rlang::obj_address(y$x) == rlang::obj_address(y$y))
+  
+  # make sure we re-lock binding
+  expect_true(bindingIsLocked("clone", attr(x, "module")))
+})
+
+test_that("Can initialize a model in the meta device and copy parameters to it", {
+  
+  with_device(device="meta", {
+    model <- nn_linear(10,10)
+  })
+  expect_equal(model$weight$device$type, "meta")
+  expect_true(model$weight$requires_grad)
+  model$bias$requires_grad_(FALSE)
+  expect_true(!model$bias$requires_grad)
+  
+  model2 <- nn_linear(10, 10)
+  model$load_state_dict(model2$state_dict(), .refer_to_state_dict = TRUE)
+  expect_equal(model$weight$device$type, "cpu")
+  expect_equal(length(model$parameters), 2)
+  expect_true(model$weight$requires_grad)
+  expect_true(!model$bias$requires_grad)
+  
+  # now let's test with a more complex model that includes a batch_norm.
+  net <- nn_module(
+    "Net",
+    initialize = function() {
+      self$features <- nn_sequential(
+        nn_conv2d(3, 5, kernel_size = 11, stride = 4, padding = 2),
+        nn_relu()
+      )
+      self$avgpool <- nn_max_pool2d(c(6, 6))
+      self$batch_norm <- nn_batch_norm2d(11)
+      self$classifier <- nn_sequential(
+        nn_dropout(),
+        nn_linear(10, 10),
+        nn_relu(),
+        nn_dropout()
+      )
+    },
+    forward = function(x) {
+      x <- self$features(x)
+      x <- self$avgpool(x)
+      x <- torch_flatten(x, start_dim = 2)
+      x <- self$classifier(x)
+    }
+  )
+  
+  with_device(device="meta", {
+    model <- net()  
+  })
+  
+  expect_true(all(sapply(model$parameters, function(x) x$device$type) == "meta"))
+  
+  model2 <- net()
+  model$load_state_dict(model2$state_dict(), .refer_to_state_dict = TRUE)
+  
+  state_dict1 <- model$state_dict()
+  state_dict2 <- model2$state_dict()
+  
+  for(i in seq_along(state_dict1)) {
+    expect_equal_to_tensor(state_dict1[[i]], state_dict2[[i]])
+  }
+  
+})
+
+test_that("non persistent buffers work correctly", {
+  module <- nn_module(
+    initialize = function() {
+      self$x <- nn_parameter(torch_tensor(1))
+      self$y <- nn_buffer(torch_tensor(2))
+      self$z <- nn_buffer(torch_tensor(3), persist = FALSE)
+    },
+    forward = function() {
+      self$x + self$y + self$z
+    }
+  )
+  
+  model <- module()
+  expect_true(all(names(model$state_dict()) %in% c("x", "y")))
+  expect_error(
+    model$load_state_dict(list(x = torch_tensor(1), y = torch_tensor(2))),
+    regexp = NA
+  )
+})
+
+test_that("can use a named module dict", {
+  
+  dict <- nn_module_dict(list(
+    x = nn_linear(1, 10),
+    y = nn_linear(10, 1)
+  ))
+  
+  x <- torch_randn(100,1)
+  y <- dict$x(x)
+  z <- dict$y(y)
+  
+  expect_tensor_shape(z, c(100, 1))
+  expect_equal(length(dict$parameters), 4)
+})

@@ -458,6 +458,9 @@ nn_glu <- nn_module(
 #' - Input: \eqn{(N, *)} where `*` means, any number of additional
 #'   dimensions
 #' - Output: \eqn{(N, *)}, same shape as the input
+#' 
+#' @param approximate the gelu approximation algorithm to use: `'none'` or `'tanh'`. 
+#'   Default: `'none'`.
 #'
 #' @examples
 #' m <- nn_gelu()
@@ -466,9 +469,11 @@ nn_glu <- nn_module(
 #' @export
 nn_gelu <- nn_module(
   "nn_gelu",
-  initialize = function() {},
+  initialize = function(approximate = "none") {
+    self$approximate <- approximate
+  },
   forward = function(input) {
-    nnf_gelu(input)
+    nnf_gelu(input, approximate = self$approximate)
   }
 )
 
@@ -1116,5 +1121,28 @@ nn_contrib_sparsemax <- nn_module(
   },
   forward = function(input) {
     nnf_contrib_sparsemax(input, self$dim)
+  }
+)
+
+#' Applies the Sigmoid Linear Unit (SiLU) function, element-wise.
+#' The SiLU function is also known as the swish function.
+#' 
+#' @details 
+#' See [Gaussian Error Linear Units (GELUs)](https://arxiv.org/abs/1606.08415)
+#' where the SiLU (Sigmoid Linear Unit) was originally coined, and see
+#' [Sigmoid-Weighted Linear Units for Neural Network Function Approximation in Reinforcement Learning](https://arxiv.org/abs/1702.03118) 
+#' and [Swish: a Self-Gated Activation Function](https://arxiv.org/abs/1710.05941v1)
+#' where the SiLU was experimented with later.
+#' 
+#' @inheritParams nn_relu
+#'
+#' @export
+nn_silu <- nn_module(
+  "nn_silu",
+  initialize = function(inplace=FALSE) {
+    self$inplace <- inplace
+  },
+  forward = function(input) {
+    nnf_silu(input, self$inplace)
   }
 )

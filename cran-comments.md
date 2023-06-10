@@ -1,6 +1,8 @@
-This release will break the following reverse dependencies:
+New release with many bug fixes and new features.
 
-- torchvisionlib
+We checked 23 reverse dependencies (22 from CRAN + 1 from Bioconductor), comparing R CMD check results across CRAN and dev versions of this package.
 
-I'll submit a new version of torchvisionlib shortly after this package
-is released.
+ * We saw 1 new problems
+ * We failed to check 9 packages
+
+The new failing package is luz, and a new version will be submitted shortly after.

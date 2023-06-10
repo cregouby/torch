@@ -57,7 +57,7 @@ torch_save.nn_module <- function(obj, path, ..., compress = TRUE) {
 
 #' @export
 torch_save.name <- function(obj, path, ..., compress= TRUE) {
-  if (!coro::is_exhausted(obj)) rlang::abort("Cannot save `name` objects.")
+  if (!is_exhausted(obj)) rlang::abort("Cannot save `name` objects.")
   saveRDS(list(type = "coro::exhausted", version = use_ser_version()), path, 
           compress = compress)
 }
@@ -147,7 +147,7 @@ torch_load_tensor <- function(obj, device = NULL) {
   } else {
     base64 <- FALSE
   }
-  Tensor$new(ptr = cpp_tensor_load(obj$values, device, base64))
+  cpp_tensor_load(obj$values, device, base64)
 }
 
 load_tensor_from_raw <- function(x, device) {
@@ -196,12 +196,15 @@ torch_load_list <- function(obj, device = NULL) {
 #' in pytorch's C++ api.
 #'
 #' @param path to the state dict file
+#' @param legacy_stream if `TRUE` then the state dict is loaded using a
+#'   a legacy way of handling streams.
+#' @param ... additional arguments that are currently not used.
 #'
 #' @return a named list of tensors.
 #'
 #' @export
 #' @concept serialization
-load_state_dict <- function(path) {
+load_state_dict <- function(path, ..., legacy_stream = FALSE) {
   path <- normalizePath(path)
   o <- cpp_load_state_dict(path)
 

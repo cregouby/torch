@@ -5,7 +5,7 @@ template:
   bslib:
     primary: "#7e1f77"
   params:
-    ganalytics: UA-178883486-1
+    ganalytics: G-9ZJSKW3L0N
     
 development:
   mode: auto
@@ -45,6 +45,10 @@ navbar:
     menu:
       - text: Memory management
         href: articles/memory-management.html
+      - text: Building locally
+        href: articles/modifying-source-code.html
+      - text: Automatic Mixed Precision
+        href: articles/amp.html
   examples:
     text: Examples
     menu:
@@ -72,6 +76,7 @@ reference:
       - torch_zeros
       - matches("torch_.*_like")
       - as_array
+      - torch_tensor_from_buffer
   - title: Tensor attributes
     contents:
       - has_concept("tensor-attributes")
@@ -110,6 +115,10 @@ reference:
   - title: Neural networks functional module
     contents:
       - starts_with("nnf_")
+  - tile: Device managig
+    contents:
+      - torch_device
+      - local_device
   - title: Optimizers
     contents:
       - optimizer
@@ -138,6 +147,20 @@ reference:
       - with_enable_grad
       - with_detect_anomaly
       - AutogradContext
+  - title: Mixed precision
+    contents:
+      - local_autocast
+      - with_autocast
+      - starts_with("cuda_amp_")
+  - title: Random numbers
+    contents:
+      - torch_manual_seed
+      - with_torch_manual_seed
+      - local_torch_manual_seed
+      - torch_get_rng_state
+      - torch_set_rng_state
+      - cuda_get_rng_state
+      - cuda_set_rng_state
   - title: Linear Algebra
     contents:
       - starts_with("linalg_")

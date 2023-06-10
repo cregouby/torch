@@ -46,6 +46,10 @@ std::string cpp_arg_to_torch_type(SEXP obj,
   if (e_dimname_list && Rf_inherits(obj, "torch_dimname_list")) {
     return "DimnameList";
   }
+  
+  if (is_in("Dimname", etypes) && is_character) {
+    return "Dimname";
+  }
 
   bool is_list = Rf_isNewList(obj);
   if (is_in("TensorOptions", etypes) &&
@@ -62,7 +66,9 @@ std::string cpp_arg_to_torch_type(SEXP obj,
   if (e_scalar_type && Rf_inherits(obj, "torch_dtype")) {
     return "ScalarType";
   }
-
+  if (e_scalar_type && is_character) {
+    return "ScalarType";
+  }
   if (e_scalar_type && is_null) {
     return "ScalarType";
   }

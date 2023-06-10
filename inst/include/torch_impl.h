@@ -124,6 +124,13 @@ XPtrTorchDtype::operator SEXP() const { return operator_sexp_dtype(this); }
 
 XPtrTorchDtype::XPtrTorchDtype(SEXP x) : XPtrTorch{from_sexp_dtype(x)} {}
 
+// layout
+
+XPtrTorchLayout::operator SEXP() const { return operator_sexp_layout(this); }
+
+XPtrTorchLayout::XPtrTorchLayout(SEXP x) : XPtrTorch{from_sexp_layout(x)} {}
+
+
 // dimname
 
 XPtrTorchDimname::operator SEXP() const { return operator_sexp_dimname(this); }
@@ -205,6 +212,7 @@ XPtrTorchvector_Scalar::XPtrTorchvector_Scalar(SEXP x)
 // string
 
 XPtrTorchstring::operator SEXP() const { return operator_sexp_string(this); }
+XPtrTorchstring::operator std::string() const { return operator_string_string(this); }
 
 XPtrTorchstring::XPtrTorchstring(SEXP x)
     : XPtrTorchstring{from_sexp_string(x)} {}
@@ -286,6 +294,30 @@ XPtrTorchIValue::operator SEXP() const { return operator_sexp_ivalue(this); }
 XPtrTorchIValue::XPtrTorchIValue(SEXP x)
     : XPtrTorchIValue{from_sexp_ivalue(x)} {}
 
+// function schema
+
+XPtrTorchFunctionSchema::XPtrTorchFunctionSchema(SEXP x)
+  : XPtrTorchFunctionSchema{from_sexp_function_schema(x)} {}
+
+// function schema list
+
+XPtrTorchFunctionSchemaList::operator SEXP() const { return operator_sexp_function_schema_list(this); }
+
+XPtrTorchFunctionSchemaList::XPtrTorchFunctionSchemaList(SEXP x)
+  : XPtrTorchFunctionSchemaList{from_sexp_function_schema_list(x)} {}
+
+// function schema argument
+
+XPtrTorchFunctionSchemaArgument::XPtrTorchFunctionSchemaArgument(SEXP x)
+  : XPtrTorchFunctionSchemaArgument{from_sexp_function_schema_argument(x)} {}
+
+// function schema argument list
+
+XPtrTorchFunctionSchemaArgumentList::operator SEXP() const { return operator_sexp_function_schema_argument_list(this); }
+
+XPtrTorchFunctionSchemaArgumentList::XPtrTorchFunctionSchemaArgumentList(SEXP x)
+  : XPtrTorchFunctionSchemaArgumentList{from_sexp_function_schema_argument_list(x)} {}
+
 // tuple
 
 XPtrTorchTuple::operator SEXP() const { return operator_sexp_tuple(this); }
@@ -345,6 +377,8 @@ XPtrTorchOptionalDoubleArrayRef::XPtrTorchOptionalDoubleArrayRef(SEXP x)
     : XPtrTorch{from_sexp_optional_double_array_ref(x)} {}
 
 // int array ref
+
+XPtrTorchIntArrayRef::operator SEXP() const { return operator_sexp_int_array_ref(this); }
 
 XPtrTorchIntArrayRef::XPtrTorchIntArrayRef(SEXP x)
     : XPtrTorch{from_sexp_int_array_ref(x, false, false)} {}

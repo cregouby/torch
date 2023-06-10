@@ -15,6 +15,7 @@ SEXP operator_sexp_device(const XPtrTorchDevice* self);
 SEXP operator_sexp_script_module(const XPtrTorchScriptModule* self);
 SEXP operator_sexp_script_method(const XPtrTorchScriptMethod* self);
 SEXP operator_sexp_dtype(const XPtrTorchDtype* self);
+SEXP operator_sexp_layout(const XPtrTorchLayout* self);
 SEXP operator_sexp_dimname(const XPtrTorchDimname* self);
 SEXP operator_sexp_dimname_list(const XPtrTorchDimnameList* self);
 SEXP operator_sexp_generator(const XPtrTorchGenerator* self);
@@ -22,6 +23,7 @@ SEXP operator_sexp_memory_format(const XPtrTorchMemoryFormat* self);
 SEXP operator_sexp_vector_string(const XPtrTorchvector_string* self);
 SEXP operator_sexp_vector_scalar(const XPtrTorchvector_Scalar* self);
 SEXP operator_sexp_string(const XPtrTorchstring* self);
+std::string operator_string_string(const XPtrTorchstring* self);
 SEXP operator_sexp_jit_named_parameter_list(
     const XPtrTorchjit_named_parameter_list* self);
 SEXP operator_sexp_jit_named_buffer_list(
@@ -33,6 +35,8 @@ SEXP operator_sexp_vector_int64_t(const XPtrTorchvector_int64_t* self);
 SEXP operator_sexp_vector_double(const XPtrTorchvector_double* self);
 SEXP operator_sexp_stack(const XPtrTorchStack* self);
 SEXP operator_sexp_ivalue(const XPtrTorchIValue* self);
+SEXP operator_sexp_function_schema_list(const XPtrTorchFunctionSchemaList* self);
+SEXP operator_sexp_function_schema_argument_list(const XPtrTorchFunctionSchemaArgumentList* self);
 SEXP operator_sexp_tuple(const XPtrTorchTuple* self);
 SEXP operator_sexp_named_tuple_helper(const XPtrTorchNamedTupleHelper* self);
 SEXP operator_sexp_vector_ivalue(const XPtrTorchvector_IValue* self);
@@ -52,6 +56,7 @@ SEXP operator_sexp_optional_scalar(const XPtrTorchoptional_scalar* x);
 SEXP operator_sexp_optional_memory_format(
     const XPtrTorchoptional_memory_format* x);
 SEXP operator_sexp_variable_list(const XPtrTorchvariable_list* x);
+SEXP operator_sexp_int_array_ref(const XPtrTorchIntArrayRef* x);
 
 XPtrTorchTensor from_sexp_tensor(SEXP x);
 XPtrTorchOptionalTensor from_sexp_optional_tensor(SEXP x);
@@ -67,6 +72,7 @@ XPtrTorchOptionalDevice from_sexp_optional_device(SEXP x);
 XPtrTorchScriptModule from_sexp_script_module(SEXP x);
 XPtrTorchScriptMethod from_sexp_script_method(SEXP x);
 XPtrTorchDtype from_sexp_dtype(SEXP x);
+XPtrTorchLayout from_sexp_layout(SEXP x);
 XPtrTorchDimname from_sexp_dimname(SEXP x);
 XPtrTorchDimnameList from_sexp_dimname_list(SEXP x);
 XPtrTorchGenerator from_sexp_generator(SEXP x);
@@ -78,6 +84,10 @@ XPtrTorchOptionalIntArrayRef from_sexp_optional_int_array_ref(SEXP x,
 XPtrTorchstring from_sexp_string(SEXP x);
 XPtrTorchTuple from_sexp_tuple(SEXP x);
 XPtrTorchTensorDict from_sexp_tensor_dict(SEXP x);
+XPtrTorchFunctionSchema from_sexp_function_schema(SEXP x);
+XPtrTorchFunctionSchemaList from_sexp_function_schema_list(SEXP x);
+XPtrTorchFunctionSchemaArgument from_sexp_function_schema_argument(SEXP x);
+XPtrTorchFunctionSchemaArgumentList from_sexp_function_schema_argument_list(SEXP x);
 XPtrTorchIValue from_sexp_ivalue(SEXP x);
 XPtrTorchvector_bool from_sexp_vector_bool(SEXP x);
 XPtrTorchvector_Scalar from_sexp_vector_scalar(SEXP x);

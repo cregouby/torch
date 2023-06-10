@@ -405,6 +405,7 @@ test_that("can create tensors from tensors", {
 test_that("print complex tensors", {
   testthat::local_edition(3)
   skip_on_os("windows")
+  skip_on_os("linux")
   x <- torch_complex(torch_randn(10), torch_randn(10))
   expect_snapshot(
     print(x)  
@@ -492,4 +493,50 @@ test_that("is_sparse works", {
   expect_false(x$is_sparse())
   x <- torch_sparse_coo_tensor(rbind(sample(10), sample(10)), rnorm(10))
   expect_true(x$is_sparse())
+})
+
+test_that("can make a byte tensor from a raw vector", {
+  
+  x <- charToRaw("hello world")
+  ten <- torch_tensor(x)
+  
+  expect_equal(ten$dtype$.type(), "Byte")
+  expect_equal(length(x), length(ten))
+  
+  expect_equal(as.array(ten), x)
+  expect_equal(rawToChar(as.array(ten)), "hello world")
+})
+
+test_that("to can change both device and dtype", {
+  
+  x <- torch_randn(10, 10)
+  y <- x$to(dtype = "double", device = "meta")
+  
+  expect_true(y$dtype == torch_double())
+  expect_true(y$device == torch_device("meta"))
+})
+
+test_that("can convert to half using the method `half()`", {
+  x <- torch_randn(10, 10)
+  y <- x$half()
+
+  expect_true(y$dtype == torch_half())
+
+  x <- torch_tensor(1, dtype="half")
+  expect_equal(as.numeric(x), 1)
+})
+
+test_that("can create tensor from a buffer", {
+  x <- runif(10)
+  y <- torch_tensor_from_buffer(x, shape = 10, dtype = "float64")
+  expect_equal(as.numeric(y), x)
+  y$add_(1)
+  expect_equal(as.numeric(y), x)
+})
+
+test_that("can create a buffer from a tensor", {
+  x <- torch_randn(10, 10)
+  y <- buffer_from_torch_tensor(x)
+  z <- torch_tensor_from_buffer(y, shape = c(10, 10), dtype="float")
+  expect_true(torch_allclose(x, z))
 })

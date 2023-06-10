@@ -49,6 +49,28 @@ void cpp_torch_tensor_print(torch::Tensor x, int n) {
 };
 
 // [[Rcpp::export]]
+torch::Tensor cpp_tensor_from_buffer(const SEXP& data, std::vector<int64_t> shape, XPtrTorchTensorOptions options) {
+  return lantern_from_blob(
+    DATAPTR(data), 
+    &shape[0], 
+    shape.size(), 
+    // we use the default strides
+    nullptr,
+    0, 
+    options.get()
+  );
+}
+
+// [[Rcpp::export]]
+SEXP cpp_buffer_from_tensor (torch::Tensor data) {
+  auto n = lantern_Tensor_numel(data.get()) * lantern_Tensor_element_size(data.get());
+  SEXP buffer = PROTECT(Rf_allocVector(RAWSXP, n = n));
+  lantern_buffer_from_tensor(data.get(), DATAPTR(buffer), n);
+  UNPROTECT(1);
+  return buffer;
+}
+
+// [[Rcpp::export]]
 Rcpp::XPtr<XPtrTorchDtype> cpp_torch_tensor_dtype(torch::Tensor x) {
   XPtrTorchDtype out = lantern_Tensor_dtype(x.get());
   return make_xptr<XPtrTorchDtype>(out);
@@ -155,6 +177,12 @@ torch::Tensor torch_tensor_cpp(SEXP x, Rcpp::Nullable<torch::Dtype> dtype,
         : Rcpp::as<torch::Dtype>(dtype);
       break;
     }
+    case RAWSXP: {
+      cdtype = lantern_Dtype_byte();
+      final_type = dtype.isNull() ? torch::Dtype(lantern_Dtype_byte())
+        : Rcpp::as<torch::Dtype>(dtype);
+      break;
+    }
     default: {
       Rcpp::stop("R type not handled");
     }
@@ -199,7 +227,7 @@ Rcpp::List tensor_to_r_array_double(torch::Tensor x) {
 Rcpp::List tensor_to_r_array_uint8_t(torch::Tensor x) {
   torch::Tensor ten = lantern_Tensor_contiguous(x.get());
   auto d_ptr = lantern_Tensor_data_ptr_uint8_t(ten.get());
-  Rcpp::Vector<LGLSXP> vec(d_ptr, d_ptr + lantern_Tensor_numel(ten.get()));
+  Rcpp::Vector<RAWSXP> vec(d_ptr, d_ptr + lantern_Tensor_numel(ten.get()));
   return Rcpp::List::create(Rcpp::Named("vec") = vec,
                             Rcpp::Named("dim") = tensor_dimensions(x));
 }
@@ -238,11 +266,9 @@ Rcpp::List tensor_to_r_array_bool(torch::Tensor x) {
 
 // [[Rcpp::export]]
 Rcpp::List cpp_as_array(Rcpp::XPtr<torch::Tensor> x) {
-  auto s =
-      lantern_Dtype_type(XPtrTorchDtype(lantern_Tensor_dtype(x->get())).get());
-  auto dtype = std::string(s);
-  lantern_const_char_delete(s);
-
+  
+  std::string dtype = torch::string(lantern_Dtype_type(XPtrTorchDtype(lantern_Tensor_dtype(x->get())).get()));
+  
   if (dtype == "Byte") {
     return tensor_to_r_array_uint8_t(*x.get());
   }
@@ -259,20 +285,20 @@ Rcpp::List cpp_as_array(Rcpp::XPtr<torch::Tensor> x) {
     return tensor_to_r_array_double(*x.get());
   }
 
+  if (dtype == "Long") {
+    return tensor_to_r_array_int64_t(*x.get());
+  }
+
   torch::TensorOptions options = lantern_TensorOptions();
 
-  if (dtype == "Float") {
+  if (dtype == "Float" || dtype == "Half") {
     options = lantern_TensorOptions_dtype(
         options.get(), XPtrTorchDtype(lantern_Dtype_float64()).get());
     return tensor_to_r_array_double(
         torch::Tensor(lantern_Tensor_to(x->get(), options.get())));
   }
 
-  if (dtype == "Long") {
-    return tensor_to_r_array_int64_t(*x.get());
-  }
-
-  Rcpp::stop("dtype not handled");
+  Rcpp::stop("dtype '" + dtype + "' not handled");
 };
 
 // [[Rcpp::export]]

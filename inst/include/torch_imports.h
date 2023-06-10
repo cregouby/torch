@@ -23,6 +23,7 @@ IMPORT_SEXP_OPERATOR(operator_sexp_device, XPtrTorchDevice)
 IMPORT_SEXP_OPERATOR(operator_sexp_script_module, XPtrTorchScriptModule)
 IMPORT_SEXP_OPERATOR(operator_sexp_script_method, XPtrTorchScriptMethod)
 IMPORT_SEXP_OPERATOR(operator_sexp_dtype, XPtrTorchDtype)
+IMPORT_SEXP_OPERATOR(operator_sexp_layout, XPtrTorchLayout)
 IMPORT_SEXP_OPERATOR(operator_sexp_dimname, XPtrTorchDimname)
 IMPORT_SEXP_OPERATOR(operator_sexp_dimname_list, XPtrTorchDimnameList)
 IMPORT_SEXP_OPERATOR(operator_sexp_generator, XPtrTorchGenerator)
@@ -41,6 +42,8 @@ IMPORT_SEXP_OPERATOR(operator_sexp_vector_int64_t, XPtrTorchvector_int64_t)
 IMPORT_SEXP_OPERATOR(operator_sexp_vector_double, XPtrTorchvector_double)
 IMPORT_SEXP_OPERATOR(operator_sexp_stack, XPtrTorchStack)
 IMPORT_SEXP_OPERATOR(operator_sexp_ivalue, XPtrTorchIValue)
+IMPORT_SEXP_OPERATOR(operator_sexp_function_schema_list, XPtrTorchFunctionSchemaList)
+IMPORT_SEXP_OPERATOR(operator_sexp_function_schema_argument_list, XPtrTorchFunctionSchemaArgumentList)
 IMPORT_SEXP_OPERATOR(operator_sexp_tuple, XPtrTorchTuple)
 IMPORT_SEXP_OPERATOR(operator_sexp_named_tuple_helper,
                      XPtrTorchNamedTupleHelper)
@@ -64,6 +67,7 @@ IMPORT_SEXP_OPERATOR(operator_sexp_optional_scalar_type,
 IMPORT_SEXP_OPERATOR(operator_sexp_optional_memory_format,
                      XPtrTorchoptional_memory_format)
 IMPORT_SEXP_OPERATOR(operator_sexp_variable_list, XPtrTorchvariable_list)
+IMPORT_SEXP_OPERATOR(operator_sexp_int_array_ref, XPtrTorchIntArrayRef)
 
 #define IMPORT_FROM_SEXP(name, type)                      \
   type name(SEXP x) {                                     \
@@ -89,6 +93,7 @@ IMPORT_FROM_SEXP(from_sexp_optional_device, XPtrTorchOptionalDevice)
 IMPORT_FROM_SEXP(from_sexp_script_module, XPtrTorchScriptModule)
 IMPORT_FROM_SEXP(from_sexp_script_method, XPtrTorchScriptMethod)
 IMPORT_FROM_SEXP(from_sexp_dtype, XPtrTorchDtype)
+IMPORT_FROM_SEXP(from_sexp_layout, XPtrTorchLayout)
 IMPORT_FROM_SEXP(from_sexp_dimname, XPtrTorchDimname)
 IMPORT_FROM_SEXP(from_sexp_dimname_list, XPtrTorchDimnameList)
 IMPORT_FROM_SEXP(from_sexp_generator, XPtrTorchGenerator)
@@ -100,6 +105,10 @@ IMPORT_FROM_SEXP(from_sexp_string, XPtrTorchstring)
 IMPORT_FROM_SEXP(from_sexp_tuple, XPtrTorchTuple)
 IMPORT_FROM_SEXP(from_sexp_tensor_dict, XPtrTorchTensorDict)
 IMPORT_FROM_SEXP(from_sexp_ivalue, XPtrTorchIValue)
+IMPORT_FROM_SEXP(from_sexp_function_schema, XPtrTorchFunctionSchema)
+IMPORT_FROM_SEXP(from_sexp_function_schema_list, XPtrTorchFunctionSchemaList)
+IMPORT_FROM_SEXP(from_sexp_function_schema_argument, XPtrTorchFunctionSchemaArgument)
+IMPORT_FROM_SEXP(from_sexp_function_schema_argument_list, XPtrTorchFunctionSchemaArgumentList)
 IMPORT_FROM_SEXP(from_sexp_vector_bool, XPtrTorchvector_bool)
 IMPORT_FROM_SEXP(from_sexp_vector_scalar, XPtrTorchvector_Scalar)
 IMPORT_FROM_SEXP(from_sexp_vector_int64_t, XPtrTorchvector_int64_t)
@@ -168,6 +177,10 @@ IMPORT_DELETER(delete_vector_string)
 IMPORT_DELETER(delete_string)
 IMPORT_DELETER(delete_stack)
 IMPORT_DELETER(delete_ivalue)
+IMPORT_DELETER(delete_function_schema_argument)
+IMPORT_DELETER(delete_function_schema_argument_list)
+IMPORT_DELETER(delete_function_schema)
+IMPORT_DELETER(delete_function_schema_list)
 IMPORT_DELETER(delete_tuple)
 IMPORT_DELETER(delete_vector_bool)
 IMPORT_DELETER(delete_vector_scalar)
@@ -238,6 +251,14 @@ void* fixme_new_dimname(const char* x) {
     fn = (void* (*)(const char*))R_GetCCallable("torch", "fixme_new_dimname");
   }
   return fn(x);
+}
+
+std::string operator_string_string(const XPtrTorchstring* self) {                                  
+  static std::string (*fn)(const XPtrTorchstring*) = NULL;                       
+  if (fn == NULL) {                                            
+    fn = (std::string(*)(const XPtrTorchstring*))R_GetCCallable("torch", "operator_string_string"); 
+  }
+  return fn(self);
 }
 
 #endif  // TORCH_IMPORTS

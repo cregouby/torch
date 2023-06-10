@@ -1,7 +1,7 @@
 Package: torch
 Type: Package
 Title: Tensors and Neural Networks with 'GPU' Acceleration
-Version: 0.9.0.9000
+Version: 0.11.0
 Authors@R: c(
     person("Daniel", "Falbel", email = "daniel@rstudio.com", role = c("aut", "cre", "cph")),
     person("Javier", "Luraschi", email = "jluraschi@gmail.com", role = c("aut")),
@@ -20,8 +20,9 @@ License: MIT + file LICENSE
 URL: https://torch.mlverse.org/docs, https://github.com/mlverse/torch
 BugReports: https://github.com/mlverse/torch/issues
 Encoding: UTF-8
-SystemRequirements: C++11, LibTorch (https://pytorch.org/); Only x86_64 platforms
+SystemRequirements: LibTorch (https://pytorch.org/); Only x86_64 platforms
   are currently supported except for ARM system running macOS.
+Config/build/copy-method: copy
 LinkingTo:
     Rcpp
 Imports:
@@ -37,8 +38,10 @@ Imports:
     tools,
     coro (>= 1.0.2),
     callr,
-    cli,
-    ellipsis
+    cli (>= 3.0.0),
+    glue,
+    ellipsis,
+    desc
 RoxygenNote: 7.2.3
 Roxygen: list(markdown = TRUE)
 Suggests:
@@ -46,7 +49,6 @@ Suggests:
     covr,
     knitr (>= 1.36),
     rmarkdown,
-    glue,
     palmerpenguins,
     mvtnorm,
     numDeriv,
@@ -55,6 +57,7 @@ VignetteBuilder: knitr
 Collate:
     'R7.R'
     'RcppExports.R'
+    'autocast.R'
     'tensor.R'
     'autograd.R'
     'backends.R'
@@ -92,6 +95,8 @@ Collate:
     'install.R'
     'ivalue.R'
     'jit-compile.R'
+    'jit-execute.R'
+    'jit-ops.R'
     'lantern_load.R'
     'lantern_sync.R'
     'layout.R'
@@ -115,6 +120,7 @@ Collate:
     'nn-upsampling.R'
     'nn-utils-clip-grad.R'
     'nn-utils-rnn.R'
+    'nn-utils-weight-norm.R'
     'nn-utils.R'
     'nn_adaptive.R'
     'nnf-activation.R'
@@ -138,6 +144,7 @@ Collate:
     'optim-adadelta.R'
     'optim-adagrad.R'
     'optim-adam.R'
+    'optim-adamw.R'
     'optim-asgd.R'
     'optim-lbfgs.R'
     'optim-lr_scheduler.R'
@@ -153,7 +160,6 @@ Collate:
     'script_module.R'
     'stack.R'
     'storage.R'
-    'tensor_options.R'
     'threads.R'
     'trace.R'
     'translate.R'
