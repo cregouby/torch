@@ -1,4 +1,4 @@
-name: "Install POCm libraries"
+name: "Install ROCm libraries"
 description: "Install ROCm libraries on Linux"
 inputs:
    rocm_version:

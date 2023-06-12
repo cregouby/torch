@@ -28,10 +28,6 @@ my_module <- nn_module(
   }
 )
 }
-<<<<<<< HEAD
-=======
-}
 \seealso{
 \code{\link[=nn_module_dict]{nn_module_dict()}}
 }
->>>>>>> origin/main

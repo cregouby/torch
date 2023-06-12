@@ -28,11 +28,3 @@ singular values (or the eigenvalues when \code{symmetric} is \code{TRUE}), and \
 is the epsilon value for the datatype of \code{input}.
 }
 
-<<<<<<< HEAD
-\examples{
-
-a = torch_eye(10)
-torch_matrix_rank(a)
-}
-=======
->>>>>>> origin/main
