@@ -22,12 +22,18 @@ LANTERN_DTYPE_FUN(bool, kBool)
 LANTERN_DTYPE_FUN(quint8, kQUInt8)
 LANTERN_DTYPE_FUN(qint8, kQInt8)
 LANTERN_DTYPE_FUN(qint32, kQInt32)
+LANTERN_DTYPE_FUN(chalf, kComplexHalf)
 LANTERN_DTYPE_FUN(cfloat, kComplexFloat)
 LANTERN_DTYPE_FUN(cdouble, kComplexDouble)
 LANTERN_DTYPE_FUN(byte, kByte)
     
 void* _lantern_Dtype_from_string (void* dtype_str) {
   LANTERN_FUNCTION_START
+  
+  if (!dtype_str) {
+    throw std::runtime_error("Error dtype can't be NULL");
+  }
+  
   auto str = from_raw::string(dtype_str);
   auto dtype = [&str] () {
     if (str == "float" || str == "float32") {

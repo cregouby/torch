@@ -15,8 +15,8 @@ prepare_method <- function(m, active = FALSE) {
 #' @importFrom rlang :=
 R7Class <- function(classname = NULL, public = list(), private = list(),
                     active = list()) {
-  methods <- new.env()
-  private_methods <- new.env()
+  methods <- new.env(parent = emptyenv())
+  private_methods <- new.env(parent = emptyenv())
 
   public <- lapply(public, prepare_method)
   active <- lapply(active, prepare_method, active = TRUE)
@@ -125,4 +125,14 @@ extract_method <- function(self, name, call = TRUE) {
 #' @export
 print.R7 <- function(x, ...) {
   x$print(...)
+}
+
+#' @export
+length.R7 <- function(x) {
+  tryCatch(
+    x$length(), 
+    error = function(err) {
+      cli::cli_abort("{.val length} is not support for objects with class {.cls {class(x)}}")
+    }
+  )
 }

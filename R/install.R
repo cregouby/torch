@@ -1,6 +1,5 @@
 branch <- "main"
-
-torch_version <- "1.13.1"
+torch_version <- "2.0.1"
 
 #' Install Torch
 #'
@@ -458,12 +457,12 @@ cuda_version_windows <- function() {
 }
 
 check_supported_cuda_version_windows <- function(version) {
-  supported_versions <- c("11.7")
+  supported_versions <- c("11.7", "11.8")
   check_supported_version(version, supported_versions)
 }
 
 check_supported_cuda_version_linux <- function(version) {
-  supported_versions <- c("11.7", "11.6")
+  supported_versions <- c("11.7", "11.8")
   check_supported_version(version, supported_versions)
 }
 
