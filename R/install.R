@@ -345,6 +345,9 @@ installation_kind <- function() {
   } else if (cu == "cpu") {
     installer_message("{.envvar CUDA} is set to {.val cpu}, so using the {.val cpu}.")
     return("cpu")
+  } else if (grepl("rocm", cu)) {
+    installer_message("Installation kind will be {.val {cu}}.")
+    return(cu)
   } else {
     cu <- paste0("cu", gsub(".", "", cu, fixed = TRUE))
     installer_message("Installation kind will be {.val {cu}}.")
