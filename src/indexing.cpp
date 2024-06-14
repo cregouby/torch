@@ -92,7 +92,7 @@ void index_append_scalar_integer(XPtrTorchTensorIndex& index, SEXP slice) {
   if (s > 0) {
     s = s - 1;
   } else if (s == 0) {
-    Rcpp::stop("Indexing in R is 1-based and found a 0.");
+    Rcpp::stop(_(_\(\1\)));
   }
 
   lantern_TensorIndex_append_int64(index.get(), s);
@@ -129,7 +129,7 @@ void index_append_integer_vector(XPtrTorchTensorIndex& index, SEXP slice) {
     if (u[j] > 0) {
       v[j] = u[j] - 1;  // make it 0-based.
     } else if (u[j] == 0) {
-      Rcpp::stop("Indexing in R is 1-based and found a 0.");
+      Rcpp::stop(_("Indexing in R is 1-based and found a 0."));
     } else {
       v[j] = u[j];
     }
@@ -167,7 +167,7 @@ bool index_append_tensor(XPtrTorchTensorIndex& index, SEXP slice) {
     bool zeros = lantern_Tensor_has_any_zeros(t->get());
     if (zeros) {
       lantern_autograd_set_grad_mode(current_autograd_mode);
-      Rcpp::stop("Indexing starts at 1 but found a 0.");
+      Rcpp::stop(_("Indexing starts at 1 but found a 0."));
     }
 
     XPtrTorchTensor sign = lantern_Tensor_signbit_tensor(t->get());
@@ -190,7 +190,7 @@ bool index_append_tensor(XPtrTorchTensorIndex& index, SEXP slice) {
     lantern_TensorIndex_append_tensor(index.get(), zero_index.get());
     lantern_autograd_set_grad_mode(current_autograd_mode);
   } else {
-    Rcpp::stop("Only long and boolean tensors are supported.");
+    Rcpp::stop(_("Only long and boolean tensors are supported."));
   }
 
   return lantern_Tensor_ndimension(t->get()) == 0;
@@ -273,7 +273,7 @@ index_info index_append_sexp(XPtrTorchTensorIndex& index, SEXP slice,
     }
   }
 
-  Rcpp::stop("Unsupported index.");
+  Rcpp::stop(_("Unsupported index."));
 }
 
 std::vector<XPtrTorchTensorIndex> slices_to_index(
@@ -351,9 +351,9 @@ void Tensor_slice_put(Rcpp::XPtr<XPtrTorchTensor> self, Rcpp::Environment e,
   auto indexes = slices_to_index(dots, true);
 
   if (indexes.size() > 1) {
-    Rcpp::stop(
+    Rcpp::stop(_(
         "Subset assignment indexing doesn't work with vector like indexing. "
-        "Use slices or scalar indexing.");
+        "Use slices or scalar indexing."));
   }
 
   auto index = indexes.at(0);
@@ -372,5 +372,5 @@ void Tensor_slice_put(Rcpp::XPtr<XPtrTorchTensor> self, Rcpp::Environment e,
     return;
   }
 
-  Rcpp::stop("rhs must be a torch_tensor or scalar value.");
+  Rcpp::stop(_("rhs must be a torch_tensor or scalar value."));
 }

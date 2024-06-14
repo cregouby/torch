@@ -85,5 +85,5 @@ translate_increase_group <- function(msg, regex, ifpos=TRUE) {
   })
   
   regmatches(msg, regexec2(regex, msg)) <- values
-  msg
+  gettext(msg,  domain = "R-torch")
 }
