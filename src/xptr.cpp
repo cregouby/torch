@@ -12,7 +12,7 @@
 void check_is_xptr(SEXP s) {
   if (TYPEOF(s) != EXTPTRSXP) {
     // using stop instead of error avoids noRemap check errors
-    Rcpp::stop("expect an externalptr");
+    Rcpp::stop(_("expect an externalptr"));
   }
 }
 

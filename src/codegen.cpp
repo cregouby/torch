@@ -152,7 +152,7 @@ std::string cpp_arg_to_torch_type(SEXP obj,
     return "const c10::List<c10::optional<Tensor>> &";
   }
 
-  Rcpp::stop("Can't convert argument:" + arg_name);
+  Rcpp::stop(_("Can't convert argument:" + arg_name));
 }
 
 inline std::string cpp_suffix(const std::vector<std::string>& arg_names,

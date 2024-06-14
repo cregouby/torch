@@ -137,7 +137,7 @@ XPtrTorchTensor from_sexp_tensor(SEXP x) {
     return torch_tensor_cpp(x);
   }
 
-  Rcpp::stop("Expected a torch_tensor.");
+  Rcpp::stop(_("Expected a torch_tensor."));
 }
 
 void delete_tensor(void* x) { lantern_Tensor_delete(x); }
@@ -216,7 +216,7 @@ XPtrTorchTensorList from_sexp_tensor_list(SEXP x) {
     return cpp_torch_tensor_list(tmp);
   }
 
-  Rcpp::stop("Expected a torch_tensor_list.");
+  Rcpp::stop(_("Expected a torch_tensor_list."));
 }
 
 void delete_tensor_list(void* x) { lantern_TensorList_delete(x); }
@@ -239,7 +239,7 @@ SEXP operator_sexp_scalar(const XPtrTorchScalar* self) {
   } else if (dtype == "Long") {
     output = lantern_Scalar_to_int(self->get());
   } else {
-    Rcpp::stop("Cannot convert from scalar of type.");
+    Rcpp::stop(_("Cannot convert from scalar of type."));
   }
 
   return output;
@@ -264,7 +264,7 @@ XPtrTorchScalar from_sexp_scalar(SEXP x) {
     return XPtrTorchScalar(lantern_Tensor_item_tensor(ten->get()));
   }
 
-  Rcpp::stop("Expected a torch_scalar.");
+  Rcpp::stop(_("Expected a torch_scalar."));
 }
 
 void delete_scalar(void* x) { lantern_Scalar_delete(x); }
@@ -304,7 +304,7 @@ XPtrTorchScalarType from_sexp_scalar_type(SEXP x) {
     return XPtrTorchScalarType(out->get_shared());
   }
 
-  Rcpp::stop("Expected a scalar type");
+  Rcpp::stop(_("Expected a scalar type"));
 }
 
 void delete_scalar_type(void* x) { lantern_ScalarType_delete(x); }
@@ -391,7 +391,7 @@ XPtrTorchTensorOptions from_sexp_tensor_options(SEXP x) {
     return options;
   }
 
-  Rcpp::stop("Expected a torch_tensor_option.");
+  Rcpp::stop(_("Expected a torch_tensor_option."));
 }
 
 void delete_tensor_options(void* x) { lantern_TensorOptions_delete(x); }
@@ -410,7 +410,7 @@ XPtrTorchCompilationUnit from_sexp_compilation_unit(SEXP x) {
     auto out = Rcpp::as<Rcpp::XPtr<XPtrTorchCompilationUnit>>(x);
     return XPtrTorchCompilationUnit(out->get_shared());
   }
-  Rcpp::stop("Unsupported type. Expected an external pointer.");
+  Rcpp::stop(_("Unsupported type. Expected an external pointer."));
 }
 
 void delete_compilation_unit(void* x) { lantern_CompilationUnit_delete(x); }
@@ -448,7 +448,7 @@ XPtrTorchDevice from_sexp_device(SEXP x) {
     return cpp_torch_device(str, index);
   }
 
-  Rcpp::stop("Expected a torch_device");
+  Rcpp::stop(_("Expected a torch_device"));
 }
 
 void delete_device(void* x) { 
@@ -482,7 +482,7 @@ XPtrTorchScriptModule from_sexp_script_module(SEXP x) {
     return XPtrTorchScriptModule((void*)nullptr);
   }
 
-  Rcpp::stop("Expected a torch_script_module");
+  Rcpp::stop(_("Expected a torch_script_module"));
 }
 
 void delete_script_module(void* x) { lantern_JITModule_delete(x); }
@@ -511,7 +511,7 @@ XPtrTorchScriptMethod from_sexp_script_method(SEXP x) {
     return XPtrTorchScriptMethod(out->get_shared());
   }
 
-  Rcpp::stop("Expected a torch_script_module");
+  Rcpp::stop(_("Expected a torch_script_module"));
 }
 
 void delete_script_method(void* x) { lantern_jit_ScriptMethod_delete(x); }
@@ -539,7 +539,7 @@ XPtrTorchDtype from_sexp_dtype(SEXP x) {
     return XPtrTorchDtype();
   }
 
-  Rcpp::stop("Expected a torch_dtype");
+  Rcpp::stop(_("Expected a torch_dtype"));
 }
 
 void delete_dtype(void* x) { lantern_Dtype_delete(x); }
@@ -562,7 +562,7 @@ XPtrTorchLayout from_sexp_layout(SEXP x) {
     return XPtrTorchLayout();
   }
   
-  Rcpp::stop("Expected a torch_layout");
+  Rcpp::stop(_("Expected a torch_layout"));
 }
 
 
@@ -585,7 +585,7 @@ XPtrTorchDimname from_sexp_dimname(SEXP x) {
     return XPtrTorchDimname(lantern_Dimname(str.get()));
   }
 
-  Rcpp::stop("Expected a torch_dimname");
+  Rcpp::stop(_("Expected a torch_dimname"));
 }
 
 void delete_dimname(void* x) { lantern_Dimname_delete(x); }
@@ -615,7 +615,7 @@ XPtrTorchDimnameList from_sexp_dimname_list(SEXP x) {
     return out;
   }
 
-  Rcpp::stop("Expected a torch_dimname_list");
+  Rcpp::stop(_("Expected a torch_dimname_list"));
 }
 
 void delete_dimname_list(void* x) { lantern_DimnameList_delete(x); }
@@ -672,7 +672,7 @@ XPtrTorchGenerator from_sexp_generator(SEXP x) {
     }
   }
 
-  Rcpp::stop("Expected a torch_generator");
+  Rcpp::stop(_("Expected a torch_generator"));
 }
 
 void delete_generator(void* x) { lantern_Generator_delete(x); }
@@ -725,7 +725,7 @@ XPtrTorchMemoryFormat from_sexp_memory_format(SEXP x) {
     return XPtrTorchMemoryFormat();
   }
 
-  Rcpp::stop("Expected a torch_dtype");
+  Rcpp::stop(_("Expected a torch_dtype"));
 }
 
 void delete_memory_format(void* x) { lantern_MemoryFormat_delete(x); }
@@ -1091,7 +1091,7 @@ SEXP operator_sexp_ivalue(const XPtrTorchIValue* self) {
   }
 
   Rcpp::Rcout << lantern_IValue_type(self->get()) << std::endl;
-  Rcpp::stop("Type not handled");
+  Rcpp::stop(_("Type not handled"));
 }
 
 XPtrTorchIValue from_sexp_ivalue(SEXP x) {
@@ -1170,7 +1170,7 @@ XPtrTorchIValue from_sexp_ivalue(SEXP x) {
     }
   }
 
-  Rcpp::stop("Unsupported type");
+  Rcpp::stop(_("Unsupported type"));
 }
 
 void delete_ivalue(void* x) { lantern_IValue_delete(x); }
@@ -1185,7 +1185,7 @@ XPtrTorchFunctionSchema from_sexp_function_schema(SEXP x) {
     auto out = Rcpp::as<Rcpp::XPtr<XPtrTorchFunctionSchema>>(x);
     return XPtrTorchFunctionSchema(out->get_shared());
   }
-  Rcpp::stop("Unsupported type. Expected an external pointer.");
+  Rcpp::stop(_("Unsupported type. Expected an external pointer."));
 }
 
 XPtrTorchFunctionSchema::operator SEXP() const {
@@ -1204,7 +1204,7 @@ XPtrTorchFunctionSchemaList from_sexp_function_schema_list(SEXP x) {
     auto out = Rcpp::as<Rcpp::XPtr<XPtrTorchFunctionSchemaList>>(x);
     return XPtrTorchFunctionSchemaList(out->get_shared());
   }
-  Rcpp::stop("Unsupported type. Expected an external pointer.");
+  Rcpp::stop(_("Unsupported type. Expected an external pointer."));
 }
 
 SEXP operator_sexp_function_schema_list(const XPtrTorchFunctionSchemaList* self) {
@@ -1226,7 +1226,7 @@ XPtrTorchFunctionSchemaArgument from_sexp_function_schema_argument(SEXP x) {
     auto out = Rcpp::as<Rcpp::XPtr<XPtrTorchFunctionSchemaArgument>>(x);
     return XPtrTorchFunctionSchemaArgument(out->get_shared());
   }
-  Rcpp::stop("Unsupported type. Expected an external pointer.");
+  Rcpp::stop(_("Unsupported type. Expected an external pointer."));
 }
 XPtrTorchFunctionSchemaArgument::operator SEXP() const {
   auto xptr = make_xptr<XPtrTorchFunctionSchemaArgument>(*this);
@@ -1243,7 +1243,7 @@ XPtrTorchFunctionSchemaArgumentList from_sexp_function_schema_argument_list(SEXP
     auto out = Rcpp::as<Rcpp::XPtr<XPtrTorchFunctionSchemaArgumentList>>(x);
     return XPtrTorchFunctionSchemaArgumentList(out->get_shared());
   }
-  Rcpp::stop("Unsupported type. Expected an external pointer.");
+  Rcpp::stop(_("Unsupported type. Expected an external pointer."));
 }
 
 SEXP operator_sexp_function_schema_argument_list(const XPtrTorchFunctionSchemaArgumentList* self) {
@@ -1380,7 +1380,7 @@ XPtrTorchOptionalTensorList from_sexp_optional_tensor_list(SEXP x) {
     return cpp_torch_optional_tensor_list(Rcpp::as<Rcpp::List>(x));
   }
 
-  Rcpp::stop("Expected a torch_optional_tensor_list.");
+  Rcpp::stop(_("Expected a torch_optional_tensor_list."));
 }
 
 void delete_optional_tensor_list(void* x) {
@@ -1427,7 +1427,7 @@ XPtrTorchIntArrayRef from_sexp_int_array_ref(SEXP x, bool allow_null,
     if (allow_null) {
       return nullptr;
     } else {
-      Rcpp::stop("Expected a list of integers and found NULL.");
+      Rcpp::stop(_("Expected a list of integers and found NULL."));
     }
   }
 
@@ -1445,7 +1445,7 @@ XPtrTorchIntArrayRef from_sexp_int_array_ref(SEXP x, bool allow_null,
   if (index) {
     for (int i = 0; i < vec.size(); i++) {
       if (vec[i] == 0) {
-        Rcpp::stop("Indexing starts at 1 but found a 0.");
+        Rcpp::stop(_("Indexing starts at 1 but found a 0."));
       }
 
       if (vec[i] > 0) {
@@ -1523,7 +1523,7 @@ XPtrTorchOptionalIntArrayRef from_sexp_optional_int_array_ref(SEXP x,
     if (index) {
       for (int i = 0; i < data.size(); i++) {
         if (data[i] == 0) {
-          Rcpp::stop("Indexing starts at 1 but found a 0.");
+          Rcpp::stop(_("Indexing starts at 1 but found a 0."));
         }
 
         if (data[i] > 0) {
@@ -1591,7 +1591,7 @@ XPtrTorchindex_int64_t from_sexp_index_int64_t(SEXP x_) {
   }
 
   if (x == 0) {
-    Rcpp::stop("Indexing starts at 1 but found a 0.");
+    Rcpp::stop(_("Indexing starts at 1 but found a 0."));
   }
 
   if (x > 0) {
@@ -1612,7 +1612,7 @@ XPtrTorchoptional_index_int64_t from_sexp_optional_index_int64_t(SEXP x_) {
 
   auto x = Rcpp::as<int64_t>(x_);
   if (x == 0) {
-    Rcpp::stop("Indexing starts at 1 but found a 0.");
+    Rcpp::stop(_("Indexing starts at 1 but found a 0."));
   }
 
   if (x > 0) {

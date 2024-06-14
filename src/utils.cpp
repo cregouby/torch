@@ -22,7 +22,7 @@ XPtrTorchTensor to_index_tensor(XPtrTorchTensor t) {
   // check that there's no zeros
   bool zeros = lantern_Tensor_has_any_zeros(t.get());
   if (zeros) {
-    Rcpp::stop("Indexing starts at 1 but found a 0.");
+    Rcpp::stop(_("Indexing starts at 1 but found a 0."));
   }
 
   /// make it 0 based!
@@ -76,7 +76,7 @@ Rcpp::List transpose2(Rcpp::List x) {
 
   for (size_t j = 0; j < size; j++) {
     if (Rf_isNull(x[j])) {
-      Rcpp::stop("NULL is not allowed. Expected a list.");
+      Rcpp::stop(_("NULL is not allowed. Expected a list."));
     }
     auto el = Rcpp::as<Rcpp::List>(x[j]);
     for (auto i = 0; i < num_elements; i++) {

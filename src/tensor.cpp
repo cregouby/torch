@@ -184,7 +184,7 @@ torch::Tensor torch_tensor_cpp(SEXP x, Rcpp::Nullable<torch::Dtype> dtype,
       break;
     }
     default: {
-      Rcpp::stop("R type not handled");
+      Rcpp::stop(_("R type not handled"));
     }
   }
 
@@ -298,7 +298,7 @@ Rcpp::List cpp_as_array(Rcpp::XPtr<torch::Tensor> x) {
         torch::Tensor(lantern_Tensor_to(x->get(), options.get())));
   }
 
-  Rcpp::stop("dtype '" + dtype + "' not handled");
+  Rcpp::stop(_("dtype '" + dtype + "' not handled"));
 };
 
 // [[Rcpp::export]]

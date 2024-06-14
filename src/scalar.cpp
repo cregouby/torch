@@ -26,9 +26,9 @@ XPtrTorchScalar cpp_torch_scalar(SEXP x) {
       out = lantern_Scalar((void*)(&b), type.c_str());
       break;
     case CHARSXP:
-      Rcpp::stop("strings are not handled yet");
+      Rcpp::stop(_("strings are not handled yet"));
     default:
-      Rcpp::stop("not handled");
+      Rcpp::stop(_("not handled"));
   }
 
   return XPtrTorchScalar(out);

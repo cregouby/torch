@@ -92,7 +92,7 @@ void index_append_scalar_integer(XPtrTorchTensorIndex& index, SEXP slice) {
   if (s > 0) {
     s = s - 1;
   } else if (s == 0) {
-    Rcpp::stop(_(_\(\1\)));
+    Rcpp::stop(_("Indexing in R is 1-based and found a 0."));
   }
 
   lantern_TensorIndex_append_int64(index.get(), s);

@@ -46,7 +46,7 @@ Rcpp::XPtr<XPtrTorchFunctionPtr> cpp_trace_function(
   } catch (const std::exception& e) {
     Rcpp::stop(std::string(e.what()) + std::string(": ") + error);
   } catch (...) {
-    Rcpp::stop("Unknown error");
+    Rcpp::stop(_("Unknown error"));
   }
 
   auto tr_fn = XPtrTorchFunctionPtr(tr_fn_ptr, deleter);
