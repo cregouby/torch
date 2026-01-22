@@ -1,25 +1,27 @@
-pandoc: 2.19.2
-pkgdown: 2.0.7
+pandoc: 3.6.3
+pkgdown: 2.2.0
 pkgdown_sha: ~
 articles:
-  memory-management: memory-management.html
+  articles/amp: amp.html
+  examples/basic-autograd: examples/basic-autograd.html
+  examples/basic-nn-module: examples/basic-nn-module.html
+  articles/compatibility-matrix: compatibility-matrix.html
+  examples/dataset: examples/dataset.html
   distributions: distributions.html
-  basic-autograd: examples/basic-autograd.html
-  basic-nn-module: examples/basic-nn-module.html
-  dataset: examples/dataset.html
-  index: examples/index.html
   extending-autograd: extending-autograd.html
+  examples/index: examples/index.html
+  tensor/index: tensor/index.html
   indexing: indexing.html
   installation: installation.html
   loading-data: loading-data.html
+  articles/memory-management: memory-management.html
+  articles/modifying-source-code: modifying-source-code.html
   python-to-r: python-to-r.html
   serialization: serialization.html
-  index: tensor/index.html
   tensor-creation: tensor-creation.html
   torchscript: torchscript.html
   using-autograd: using-autograd.html
-last_built: 2023-01-23T16:06Z
+last_built: 2026-01-22T13:13Z
 urls:
-  reference: https://torch.mlverse.org/docs/reference
-  article: https://torch.mlverse.org/docs/articles
-
+  reference: https://cregouby.github.io/torch/reference
+  article: https://cregouby.github.io/torch/articles
