@@ -238,6 +238,9 @@ Tensor <- R7Class(
       o[[2]] <- o[[2]] + 1L # make 1 based
       o
     },
+    indices = function() {
+      private$`_indices`() + 1L
+    },
     argsort = function(dim = -1L, descending = FALSE) {
       private$`_argsort`(dim = dim, descending = descending)$add_(1L, 1L)
     },
@@ -286,6 +289,9 @@ Tensor <- R7Class(
     },
     is_sparse = function() {
       cpp_method_Tensor_is_sparse(self)
+    },
+    is_sparse_csr = function() {
+      cpp_method_Tensor_is_sparse_csr(self)
     },
     movedim = function(source, destination) {
       private$`_movedim`(as_1_based_dim(source), as_1_based_dim(destination))
@@ -409,6 +415,13 @@ as.matrix.torch_tensor <- function(x, ...) {
 }
 
 as_array_impl <- function(x) {
+  if (x$is_sparse() || x$is_sparse_csr()) {
+    cli_abort(c(
+      "Sparse tensors are not supported for as_array conversion.",
+      i = "Use `as_array(x$to_dense())` to convert to a dense tensor first."
+    ))
+  }
+
   # move tensor to cpu before copying to R
   x <- x$cpu()
 
@@ -530,4 +543,19 @@ torch_tensor_from_buffer <- function(buffer, shape, dtype = "float") {
 #' @export
 buffer_from_torch_tensor <- function(tensor) {
   cpp_buffer_from_tensor(tensor)
+}
+
+#' @export
+#' @importFrom utils head
+head.torch_tensor <- function(x, n = 6, ...) {
+  index <- torch_tensor(seq_len(min(n, x$size(1))))
+  torch_index_select(x, dim = 1, index = index)
+}
+
+#' @export
+#' @importFrom utils tail
+tail.torch_tensor <- function(x, n = 6, ...) {
+  sz <- x$size(1)
+  index <- seq.int(max(1, sz - n + 1), sz)
+  torch_index_select(x, dim = 1, index = index)
 }
