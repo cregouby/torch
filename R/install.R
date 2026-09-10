@@ -997,7 +997,7 @@ install_torch_sitrep <- function(verbose = TRUE) {
   results$cuda <- list(detected = detected_cuda, kind = install_kind)
   
   # ============================================
-  # Section 5: Runtime Load Test
+  # Section 5: Runtime Load Test & Windows Auto-Diagnosis
   # ============================================
   if (verbose) cli::cli_h1("Runtime Load Test")
   
@@ -1008,23 +1008,67 @@ install_torch_sitrep <- function(verbose = TRUE) {
   
   if (torch_works) {
     if (verbose) cli::cli_alert_success("torch is loaded and functional!")
-    
-    cuda_avail <- tryCatch(isTRUE(torch::cuda_is_available()), error = function(e) FALSE)
-    if (verbose) {
-      if (cuda_avail) cli::cli_alert_success("CUDA is available at runtime.")
-      else cli::cli_alert_warning("CUDA not available (CPU mode).")
-    }
-    results$runtime <- list(loaded = TRUE, cuda_available = cuda_avail)
+    results$runtime <- list(loaded = TRUE)
   } else {
-    if (verbose) cli::cli_alert_danger("torch failed to load!")
-    issues <<- c(issues, "torch::torch_tensor(1) failed. Lantern is not loaded.")
+    if (verbose) cli::cli_alert_danger("torch failed to load. Starting automated diagnosis...")
     
-    if (os_type == "Linux") {
+    # --- AUTOMATED WINDOWS DIAGNOSIS ---
+    if (os_type == "Windows") {
+      # 1. Find the DLL (Tests Issue 4: Path/Install)
+      dll_path <- NULL
+      if (!is.null(install_path)) {
+        for (ld in file.path(install_path, c("lib", "bin"))) {
+          candidate <- file.path(ld, "liblantern.dll")
+          if (file.exists(candidate)) { dll_path <- candidate; break }
+        }
+      }
+      
+      if (is.null(dll_path)) {
+        # ISSUE 4: Path/Installation
+        cli::cli_alert_danger("DIAGNOSIS: Installation path is incorrect or incomplete.")
+        issues <<- c(issues, "liblantern.dll not found in {.path {install_path}}.")
+        issues <<- c(issues, "ACTION: Run {.code torch::install_torch(reinstall = TRUE)} or set {.envvar TORCH_HOME}.")
+      } else {
+        # 2. Try to load the DLL (Tests Issue 1 & 3: VCR & Missing Deps)
+        load_err <- tryCatch({
+          dyn.load(dll_path)
+          NULL 
+        }, error = function(e) e$message)
+        
+        if (!is.null(load_err)) {
+          if (grepl("already loaded", load_err, ignore.case = TRUE)) {
+            # DLL is loaded fine, issue is internal to torch
+            cli::cli_alert_warning("DIAGNOSIS: DLL loads fine, but torch internal state failed.")
+          } else if (grepl("module could not be found", load_err, ignore.case = TRUE)) {
+            # ISSUE 1: Visual C++ Redistributable
+            cli::cli_alert_danger("DIAGNOSIS: Missing Visual C++ Redistributable (VCR).")
+            issues <<- c(issues, "Windows cannot find required system DLLs (vcruntime140.dll).")
+            issues <<- c(issues, "ACTION: Download and install the latest VC++ Redistributable x64 from Microsoft.")
+          } else {
+            # ISSUE 3: Other dependency issue
+            cli::cli_alert_danger("DIAGNOSIS: DLL dependency error.")
+            issues <<- c(issues, paste("Error:", load_err))
+          }
+        } else {
+          # DLL loaded successfully during test (or was already loaded)
+          cli::cli_alert_success("DIAGNOSIS: liblantern.dll loads successfully.")
+        }
+        
+        # 3. Check PATH for conflicts (Tests Issue 2: PATH conflicts)
+        path_dirs <- strsplit(Sys.getenv("PATH"), ";")[[1]]
+        conflicts <- grep("python|conda|anaconda|torch", path_dirs, ignore.case = TRUE, value = TRUE)
+        if (length(conflicts) > 0) {
+          cli::cli_alert_warning("DIAGNOSIS: Potential PATH conflicts detected.")
+          issues <<- c(issues, "Your PATH contains Python/Conda/Torch entries that may intercept DLL loading.")
+          issues <<- c(issues, "ACTION: Temporarily remove them from PATH and restart R.")
+        }
+      }
+    } else {
+      # Linux/Mac fallback
       issues <<- c(issues, "Run: ldd <install_path>/lib/liblantern.so | grep 'not found'")
-    } else if (os_type == "Windows") {
-      issues <<- c(issues, "Install Visual C++ Redistributable or check antivirus.")
     }
-    results$runtime <- list(loaded = FALSE, cuda_available = FALSE)
+    
+    results$runtime <- list(loaded = FALSE)
   }
   
   # ============================================
