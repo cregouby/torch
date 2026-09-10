@@ -891,7 +891,7 @@ install_torch_sitrep <- function(verbose = TRUE) {
   
   torch_pkg_version <- tryCatch(as.character(utils::packageVersion("torch")), error = function(e) "unknown")
   
-  # FIX: Use the exported torch_install_path() which mirrors install_lib() logic
+  # Use the exported torch_install_path() which mirrors install_lib() logic
   # (TORCH_HOME env var -> system.file(package="torch"))
   install_path <- tryCatch(
     torch::torch_install_path(),
