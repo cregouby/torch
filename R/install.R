@@ -948,6 +948,35 @@ install_torch_sitrep <- function(verbose = TRUE) {
   }
   results$files <- files_found
   
+  # Section 3b: Linux-Specific Checks (Source vs Binary conflict)
+  if (os_type == "Linux" && !is.null(install_path) && dir.exists(install_path)) {
+    if (verbose) cli::cli_h1("Installation Method Check (Linux)")
+    
+    # Check if package was installed from source (look for compiled objects)
+    libs_dir <- file.path(install_path, "libs")
+    has_source_build <- dir.exists(libs_dir) && length(list.files(libs_dir, pattern = "\\.so$")) > 0
+    
+    # Check if binary lantern exists
+    has_binary_lantern <- files_found$lantern
+    
+    if (has_source_build && has_binary_lantern) {
+      cli::cli_alert_danger("MIXED INSTALLATION DETECTED!")
+      cli::cli_text("This system has BOTH source-compiled files AND binary libraries.")
+      cli::cli_text("This causes {.strong undefined symbol} errors due to version mismatch.")
+      issues <<- c(issues,
+                   "CONFLICT: Source and binary installations are mixed.",
+                   "ACTION: Choose ONE method:",
+                   "  - Binary (recommended): remove.packages('torch'); delete folder; install.packages('torch'); install_torch()",
+                   "  - Source: Sys.setenv(BUILD_LANTERN='true'); install.packages('torch', type='source')"
+      )
+    } else if (has_source_build && !has_binary_lantern) {
+      cli::cli_alert_warning("Source-only installation detected (lantern not built).")
+      issues <<- c(issues,
+                   "Source installation skipped lantern build (common on Linux).",
+                   "ACTION: Run install_torch() to download binary lantern/LibTorch, OR rebuild from source with BUILD_LANTERN=true"
+      )
+    }
+  }
   # ============================================
   # Section 4: CUDA Detection (replay install logic)
   # ============================================
@@ -996,6 +1025,44 @@ install_torch_sitrep <- function(verbose = TRUE) {
   }
   results$cuda <- list(detected = detected_cuda, kind = install_kind)
   
+  # Section 4b: Extended CUDA Detection (Debian paths)
+  if (os_type == "Linux" && is.null(detected_cuda)) {
+    if (verbose) cli::cli_h1("Extended CUDA Search (Debian/Ubuntu)")
+    
+    # Check Debian-specific paths
+    debian_cuda_paths <- c(
+      "/usr/lib/cuda",
+      "/usr/lib/nvidia-cuda-toolkit",
+      "/usr/local/cuda"
+    )
+    
+    for (cuda_path in debian_cuda_paths) {
+      if (dir.exists(cuda_path)) {
+        version_file <- file.path(cuda_path, "version.txt")
+        if (file.exists(version_file)) {
+          ver <- readLines(version_file, warn = FALSE)
+          ver <- gsub("CUDA Version |\\.[0-9]+$", "", ver[1])
+          if (nzchar(ver)) {
+            cli::cli_alert_success("Found CUDA {.val {ver}} in Debian path: {.path {cuda_path}}")
+            detected_cuda <<- ver  # Update the global variable
+            install_kind <<- paste0("cu", gsub(".", "", ver, fixed = TRUE))
+            issues <<- c(issues,
+                         sprintf("CUDA %s found in %s but not used.", ver, cuda_path),
+                         "ACTION: Set CUDA_HOME explicitly:",
+                         sprintf("  Sys.setenv(CUDA_HOME='%s')", cuda_path),
+                         "  Then run: install_torch(reinstall = TRUE)"
+            )
+            break
+          }
+        }
+      }
+    }
+    
+    if (is.null(detected_cuda)) {
+      cli::cli_alert_warning("No CUDA found in standard OR Debian paths.")
+    }
+  }
+  
   # ============================================
   # Section 5: Runtime Load Test & Windows Auto-Diagnosis
   # ============================================
@@ -1024,10 +1091,11 @@ install_torch_sitrep <- function(verbose = TRUE) {
       }
       
       if (is.null(dll_path)) {
-        # ISSUE 4: Path/Installation
-        cli::cli_alert_danger("DIAGNOSIS: Installation path is incorrect or incomplete.")
+        # Incomplete installation due to copy failure 
+        cli::cli_alert_danger("DIAGNOSIS: Installation is incomplete (files missing).")
         issues <<- c(issues, "liblantern.dll not found in {.path {install_path}}.")
-        issues <<- c(issues, "ACTION: Run {.code torch::install_torch(reinstall = TRUE)} or set {.envvar TORCH_HOME}.")
+        issues <<- c(issues, "WINDOWS COPY FAILURE: This is typically caused by Antivirus/Windows Defender locking .dll files during extraction, or a background R process holding a file lock.")
+        issues <<- c(issues, "ACTION: 1. Close ALL R/RStudio instances. 2. Temporarily pause Antivirus real-time protection. 3. Manually delete the 'torch' folder. 4. Run {.code torch::install_torch(reinstall = TRUE)}.")
       } else {
         # 2. Try to load the DLL (Tests Issue 1 & 3: VCR & Missing Deps)
         load_err <- tryCatch({
@@ -1086,6 +1154,17 @@ install_torch_sitrep <- function(verbose = TRUE) {
       env_set <- TRUE
     }
   }
+  # Check for invalid URL overrides in *_URL
+  tor_url <- Sys.getenv("TORCH_URL", "")
+  lan_url <- Sys.getenv("LANTERN_URL", "")
+  
+  for (u in c(tor_url, lan_url)) {
+    if (nzchar(u) && !grepl("^https?://", u) && !file.exists(u)) {
+      issues <<- c(issues, 
+                   sprintf("WARNING: Env var points to '%s', which is neither a valid URL nor an existing file. The installer ignored it.", u))
+    }
+  }
+  
   if (!env_set && verbose) cli::cli_alert_info("No torch-specific environment variables set.")
   results$env_vars <- env_set
   
