@@ -948,7 +948,7 @@ install_torch_sitrep <- function(verbose = TRUE) {
   }
   results$files <- files_found
   
-  # Section 3b: Linux-Specific Checks (Source vs Binary conflict)
+  # Linux-Specific Checks (Source vs Binary conflict)
   if (os_type == "Linux" && !is.null(install_path) && dir.exists(install_path)) {
     if (verbose) cli::cli_h1("Installation Method Check (Linux)")
     
@@ -1173,18 +1173,28 @@ install_torch_sitrep <- function(verbose = TRUE) {
   # ============================================
   if (verbose) cli::cli_h1("Summary")
   
+  # Only say "No issues" if torch ACTUALLY works
   if (length(issues) > 0) {
-    for (issue in unique(issues)) cli::cli_alert_warning(issue)
-    # Advanced Troubleshooting
+    for (issue in unique(issues)) {
+      need_advanced_troubleshooting <- TRUE
+      cli::cli_alert_warning(issue)
+    }
+  } else if (torch_works) {
+    cli::cli_alert_success("No issues detected. torch is working correctly.")
+  } else {
+    need_advanced_troubleshooting <- TRUE
+    cli::cli_alert_warning(c("torch failed to load, but no specific root cause was automatically identified.",
+                           " Run Advanced Troubleshooting and open an issue in the project github repository."))
+  }
+  
+  # Advanced Troubleshooting
+  if (need_advanced_troubleshooting) {
     cli::cli_h2("Advanced Troubleshooting")
     cli::cli_text("If issues persist, enable debug logging:")
     cli::cli_code("Sys.setenv(TORCH_INSTALL_DEBUG = '1')")
     cli::cli_code("torch::install_torch(reinstall = TRUE)")
     cli::cli_text("This shows detailed installation steps. Include this log in support tickets.")
-  } else {
-    cli::cli_alert_success("No issues detected. torch is working correctly.")
-  }
-  
+}  
   results$issues <- unique(issues)
   invisible(results)
 }
