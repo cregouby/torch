@@ -220,7 +220,7 @@ is_dependent <- function(object) {
       self$upper_bound <- upper_bound
     },
     check = function(value) {
-      self$upper_bound < value
+      value <= self$upper_bound
     },
     print = function() {
       cat(glue::glue(
