@@ -842,7 +842,15 @@ install_torch_sitrep <- function(verbose = TRUE) {
       fn(...)
     }, error = function(e) NULL)
   }
-  # Helper: force English for a block of code (with no withr dependency)
+  # Helper: safely retrieve an internal torch object (non-function)
+  get_internal <- function(name, default = NULL) {
+    tryCatch(
+      get(name, envir = asNamespace("torch"), inherits = FALSE),
+      error = function(e) default
+    )
+  }
+  # Helper: force English for a block of code (withr::with_language equivalent,
+  # kept inline so it works during early package load before withr is attached)
   with_language_en <- function(expr) {
     old_lang <- Sys.getenv("LANGUAGE", unset = NA)
     Sys.setenv(LANGUAGE = "en")
@@ -869,7 +877,7 @@ install_torch_sitrep <- function(verbose = TRUE) {
                            if (length(pretty) > 0) gsub('^PRETTY_NAME="?([^"]+)"?$', "\\1", pretty) else "Linux"
                          } else "Linux"
                        }, error = function(e) "Linux"),
-                       "Darwin" = tryCatch(system("sw_vers -productVersion", intern = TRUE), error = function(e) "macOS"),
+                       "Darwin" = tryCatch(paste(system("sw_vers -productVersion", intern = TRUE), collapse = " "), error = function(e) "macOS"),
                        "Windows" = paste(Sys.info()["release"], Sys.info()["version"]),
                        as.character(os_type)
   )
@@ -926,7 +934,7 @@ install_torch_sitrep <- function(verbose = TRUE) {
         files_found$details <- c(files_found$details, paste0("[", basename(ld), "]: ", paste(files, collapse = ", ")))
       }
       if (any(grepl("lantern", files, ignore.case = TRUE))) files_found$lantern <- TRUE
-      if (any(grepl("libtorch|torch", files, ignore.case = TRUE))) files_found$libtorch <- TRUE
+      if (any(grepl("^(lib)?torch[_.]", files, ignore.case = TRUE))) files_found$libtorch <- TRUE
     }
   }
   
@@ -1007,9 +1015,9 @@ install_torch_sitrep <- function(verbose = TRUE) {
   # Check CUDA compatibility
   if (!is.null(detected_cuda) && os_type %in% c("Linux", "Windows")) {
     supported <- if (os_type == "Linux") {
-      call_internal("supported_cuda_versions_linux") %||% c("12.6", "12.8", "12.9")
+      get_internal("supported_cuda_versions_linux", default = c("12.6", "12.8", "12.9"))
     } else {
-      call_internal("supported_cuda_versions_windows") %||% c("12.6", "12.8", "12.9")
+      get_internal("supported_cuda_versions_windows", default = c("12.6", "12.8", "12.9"))
     }
     
     if (!detected_cuda %in% supported) {
@@ -1023,45 +1031,47 @@ install_torch_sitrep <- function(verbose = TRUE) {
       cli::cli_alert_success("Detected CUDA version is supported.")
     }
   }
-  results$cuda <- list(detected = detected_cuda, kind = install_kind)
-  
   # Section 4b: Extended CUDA Detection (Debian paths)
   if (os_type == "Linux" && is.null(detected_cuda)) {
     if (verbose) cli::cli_h1("Extended CUDA Search (Debian/Ubuntu)")
-    
-    # Check Debian-specific paths
+
     debian_cuda_paths <- c(
       "/usr/lib/cuda",
       "/usr/lib/nvidia-cuda-toolkit",
       "/usr/local/cuda"
     )
-    
+
     for (cuda_path in debian_cuda_paths) {
       if (dir.exists(cuda_path)) {
         version_file <- file.path(cuda_path, "version.txt")
         if (file.exists(version_file)) {
           ver <- readLines(version_file, warn = FALSE)
-          ver <- gsub("CUDA Version |\\.[0-9]+$", "", ver[1])
+          # Strip the "CUDA Version " prefix, then drop the patch segment only
+          # when the version has three parts (e.g. "12.8.0" -> "12.8"), leaving
+          # two-part versions like "11.7" intact.
+          ver <- sub("^CUDA Version\\s+", "", ver[1])
+          if (lengths(regmatches(ver, gregexpr("\\.", ver))) > 1) {
+            ver <- sub("\\.[0-9]+$", "", ver)
+          }
           if (nzchar(ver)) {
             cli::cli_alert_success("Found CUDA {.val {ver}} in Debian path: {.path {cuda_path}}")
-            detected_cuda <<- ver  # Update the global variable
-            install_kind <<- paste0("cu", gsub(".", "", ver, fixed = TRUE))
+            detected_cuda <- ver
+            install_kind <- paste0("cu", gsub(".", "", ver, fixed = TRUE))
             issues <<- c(issues,
-                         sprintf("CUDA %s found in %s but not used.", ver, cuda_path),
-                         "ACTION: Set CUDA_HOME explicitly:",
-                         sprintf("  Sys.setenv(CUDA_HOME='%s')", cuda_path),
-                         "  Then run: install_torch(reinstall = TRUE)"
+                         sprintf("CUDA %s found in '%s' but not used by torch.", ver, cuda_path),
+                         sprintf("ACTION: Sys.setenv(CUDA_HOME='%s') then install_torch(reinstall = TRUE).", cuda_path)
             )
             break
           }
         }
       }
     }
-    
+
     if (is.null(detected_cuda)) {
       cli::cli_alert_warning("No CUDA found in standard OR Debian paths.")
     }
   }
+  results$cuda <- list(detected = detected_cuda, kind = install_kind)
   
   # ============================================
   # Section 5: Runtime Load Test & Windows Auto-Diagnosis
@@ -1091,16 +1101,20 @@ install_torch_sitrep <- function(verbose = TRUE) {
       }
       
       if (is.null(dll_path)) {
-        # Incomplete installation due to copy failure 
+        # Incomplete installation due to copy failure
         cli::cli_alert_danger("DIAGNOSIS: Installation is incomplete (files missing).")
-        issues <<- c(issues, "liblantern.dll not found in {.path {install_path}}.")
-        issues <<- c(issues, "WINDOWS COPY FAILURE: This is typically caused by Antivirus/Windows Defender locking .dll files during extraction, or a background R process holding a file lock.")
-        issues <<- c(issues, "ACTION: 1. Close ALL R/RStudio instances. 2. Temporarily pause Antivirus real-time protection. 3. Manually delete the 'torch' folder. 4. Run {.code torch::install_torch(reinstall = TRUE)}.")
+        issues <<- c(issues,
+          sprintf("liblantern.dll not found in '%s'.", install_path),
+          "WINDOWS COPY FAILURE: typically caused by Antivirus/Windows Defender locking .dll files during extraction, or a background R process holding a file lock.",
+          "ACTION: 1. Close ALL R/RStudio instances. 2. Temporarily pause Antivirus real-time protection. 3. Manually delete the 'torch' folder. 4. Run torch::install_torch(reinstall = TRUE)."
+        )
       } else {
-        # 2. Try to load the DLL (Tests Issue 1 & 3: VCR & Missing Deps)
+        # 2. Try to load the DLL (tests for missing VC++ Redistributable or other deps).
+        # Use on.exit to unload so the diagnostic doesn't permanently alter the session.
         load_err <- tryCatch({
           dyn.load(dll_path)
-          NULL 
+          on.exit(try(dyn.unload(dll_path), silent = TRUE), add = TRUE)
+          NULL
         }, error = function(e) e$message)
         
         if (!is.null(load_err)) {
@@ -1133,7 +1147,10 @@ install_torch_sitrep <- function(verbose = TRUE) {
       }
     } else {
       # Linux/Mac fallback
-      issues <<- c(issues, "Run: ldd <install_path>/lib/liblantern.so | grep 'not found'")
+      issues <<- c(issues, sprintf(
+        "Run: ldd '%s/lib/liblantern.so' | grep 'not found'",
+        install_path %||% "<install_path>"
+      ))
     }
     
     results$runtime <- list(loaded = FALSE)
@@ -1173,18 +1190,20 @@ install_torch_sitrep <- function(verbose = TRUE) {
   # ============================================
   if (verbose) cli::cli_h1("Summary")
   
-  # Only say "No issues" if torch ACTUALLY works
+  need_advanced_troubleshooting <- FALSE
   if (length(issues) > 0) {
+    need_advanced_troubleshooting <- TRUE
     for (issue in unique(issues)) {
-      need_advanced_troubleshooting <- TRUE
       cli::cli_alert_warning(issue)
     }
   } else if (torch_works) {
     cli::cli_alert_success("No issues detected. torch is working correctly.")
   } else {
     need_advanced_troubleshooting <- TRUE
-    cli::cli_alert_warning(c("torch failed to load, but no specific root cause was automatically identified.",
-                           " Run Advanced Troubleshooting and open an issue in the project github repository."))
+    cli::cli_alert_warning(c(
+      "torch failed to load, but no specific root cause was automatically identified.",
+      " Run Advanced Troubleshooting and open an issue in the project github repository."
+    ))
   }
   
   # Advanced Troubleshooting
@@ -1194,7 +1213,7 @@ install_torch_sitrep <- function(verbose = TRUE) {
     cli::cli_code("Sys.setenv(TORCH_INSTALL_DEBUG = '1')")
     cli::cli_code("torch::install_torch(reinstall = TRUE)")
     cli::cli_text("This shows detailed installation steps. Include this log in support tickets.")
-}  
+  }
   results$issues <- unique(issues)
   invisible(results)
 }
