@@ -33,7 +33,7 @@ jobs:
 
         include:
           - config: {os: ubuntu}
-            container: ubuntu:20.04
+            container: ubuntu:22.04
           
           - config: {version: cu12.6}
             cuda: 12.6
@@ -60,7 +60,7 @@ jobs:
           curl -fsSL https://get.docker.com -o get-docker.sh
           DRY_RUN=1 sh ./get-docker.sh
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       
       - name: Setup cmake
         uses: jwlawson/actions-setup-cmake@v2
