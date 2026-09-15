@@ -840,7 +840,7 @@ install_torch_sitrep <- function(verbose = TRUE) {
     tryCatch({
       fn <- get(name, envir = asNamespace("torch"), mode = "function")
       fn(...)
-    }, error = function(e) NULL)
+    }, error = function(e) cli::cli_alert_warning(e))
   }
   # Helper: safely retrieve an internal torch object (non-function)
   get_internal <- function(name, default = NULL) {
@@ -938,13 +938,13 @@ install_torch_sitrep <- function(verbose = TRUE) {
     }
   }
   
+  if (!files_found$lantern) issues <<- c(issues, "liblantern is missing from the install directory.")
+  if (!files_found$libtorch) issues <<- c(issues, "libtorch files are missing from the install directory.")
   if (verbose) {
     if (files_found$lantern && files_found$libtorch) {
       cli::cli_alert_success("Core installation files are present on disk.")
     } else if (!is.null(install_path)) {
       cli::cli_alert_warning("Core installation files are MISSING or incomplete.")
-      if (!files_found$lantern) issues <<- c(issues, "liblantern is missing from the install directory.")
-      if (!files_found$libtorch) issues <<- c(issues, "libtorch files are missing from the install directory.")
     } else {
       cli::cli_alert_warning("Installation directory not found.")
     }
