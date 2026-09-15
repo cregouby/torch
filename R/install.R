@@ -1146,44 +1146,151 @@ install_torch_sitrep <- function(verbose = TRUE) {
         }
       }
     } else {
-      # Linux/Mac fallback
-      issues <<- c(issues, sprintf(
-        "Run: ldd '%s/lib/liblantern.so' | grep 'not found'",
-        install_path %||% "<install_path>"
-      ))
+      # Linux/Mac: locate lantern and run ldd/otool automatically
+      lantern_name <- if (os_type == "Darwin") "liblantern.dylib" else "liblantern.so"
+      lantern_path <- NULL
+      if (!is.null(install_path)) {
+        for (ld in file.path(install_path, c("lib", "lib64"))) {
+          candidate <- file.path(ld, lantern_name)
+          if (file.exists(candidate)) { lantern_path <- candidate; break }
+        }
+      }
+
+      if (os_type == "Linux" && !is.null(lantern_path)) {
+        ldd_output <- tryCatch(
+          system2("ldd", lantern_path, stdout = TRUE, stderr = TRUE),
+          error = function(e) NULL
+        )
+        if (!is.null(ldd_output)) {
+          missing_libs <- grep("=> not found", ldd_output, value = TRUE)
+          missing_names <- trimws(gsub("^\\s*([^=]+)\\s*=>.*", "\\1", missing_libs))
+          if (length(missing_names) > 0) {
+            cli::cli_alert_danger("Missing shared library dependencies:")
+            for (lib in missing_names) cli::cli_bullets(c("x" = "{.file {lib}}"))
+            issues <<- c(issues,
+              paste0("Missing shared library dependencies for liblantern.so: ",
+                     paste(missing_names, collapse = ", ")),
+              "These libraries must be available in LD_LIBRARY_PATH or system paths."
+            )
+            if (any(grepl("libcudart", missing_names))) {
+              issues <<- c(issues,
+                "Missing libcudart: add the CUDA lib64 directory to LD_LIBRARY_PATH,",
+                "  e.g. export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
+              )
+            }
+          } else {
+            if (verbose) cli::cli_alert_success("All shared library dependencies are satisfied.")
+          }
+          if (verbose) {
+            cli::cli_text("\n{.strong All dependencies for {lantern_name}:}")
+            for (line in ldd_output) {
+              if (grepl("not found", line)) cli::cli_text("  {.emph {line}}") else cli::cli_text("  {line}")
+            }
+          }
+        } else {
+          if (verbose) cli::cli_alert_warning("Could not run ldd.")
+          issues <<- c(issues, sprintf("Run manually: ldd '%s' | grep 'not found'", lantern_path))
+        }
+      } else if (os_type == "Darwin" && !is.null(lantern_path)) {
+        otool_output <- tryCatch(
+          system2("otool", c("-L", lantern_path), stdout = TRUE, stderr = TRUE),
+          error = function(e) NULL
+        )
+        if (!is.null(otool_output)) {
+          if (verbose) {
+            cli::cli_text("\n{.strong Dependencies for {lantern_name}:}")
+            for (line in otool_output) cli::cli_text("  {line}")
+          }
+        } else {
+          if (verbose) cli::cli_alert_warning("Could not run otool -L.")
+          issues <<- c(issues, sprintf("Run manually: otool -L '%s'", lantern_path))
+        }
+      } else {
+        issues <<- c(issues,
+          if (is.null(lantern_path))
+            "liblantern not found; cannot run dependency check."
+          else
+            sprintf("Run: ldd '%s' | grep 'not found'", lantern_path)
+        )
+      }
     }
-    
+
     results$runtime <- list(loaded = FALSE)
   }
-  
+
+  # ============================================
+  # Section 5b: Backend Status
+  # ============================================
+  if (torch_works) {
+    if (verbose) cli::cli_h1("Backend Status")
+
+    cuda_available <- tryCatch(isTRUE(torch::cuda_is_available()),        error = function(e) FALSE)
+    cudnn_avail    <- tryCatch(isTRUE(torch::backends_cudnn_is_available()), error = function(e) FALSE)
+    mkl_avail      <- tryCatch(isTRUE(torch::backends_mkl_is_available()),   error = function(e) FALSE)
+    mkldnn_avail   <- tryCatch(isTRUE(torch::backends_mkldnn_is_available()), error = function(e) FALSE)
+    openmp_avail   <- tryCatch(isTRUE(torch::backends_openmp_is_available()), error = function(e) FALSE)
+    mps_avail      <- tryCatch(isTRUE(torch::backends_mps_is_available()),   error = function(e) FALSE)
+
+    if (verbose) {
+      if (cuda_available) cli::cli_alert_success("CUDA is available") else cli::cli_alert_info("CUDA is NOT available (CPU only)")
+      if (cudnn_avail)    cli::cli_alert_success("cuDNN is available") else cli::cli_alert_info("cuDNN is NOT available")
+      if (mkl_avail)      cli::cli_alert_success("MKL is available") else cli::cli_alert_info("MKL is NOT available")
+      if (mkldnn_avail)   cli::cli_alert_success("MKL-DNN is available") else cli::cli_alert_info("MKL-DNN is NOT available")
+      if (openmp_avail)   cli::cli_alert_success("OpenMP is available") else cli::cli_alert_info("OpenMP is NOT available")
+      if (os_type == "Darwin") {
+        if (mps_avail) cli::cli_alert_success("MPS (Apple Silicon GPU) is available") else cli::cli_alert_info("MPS is NOT available")
+      }
+      if (cudnn_avail) {
+        cudnn_ver <- tryCatch(torch::backends_cudnn_version(), error = function(e) NA)
+        if (!is.na(cudnn_ver)) cli::cli_alert_info("cuDNN version: {.val {cudnn_ver}}")
+      }
+    }
+
+    if (install_kind != "cpu" && !cuda_available) {
+      issues <<- c(issues,
+        "CUDA build installed but CUDA is not available.",
+        "Check CUDA installation and driver; verify CUDA_VISIBLE_DEVICES is not hiding all GPUs."
+      )
+    }
+
+    results$backends <- list(
+      cuda    = cuda_available,
+      cudnn   = cudnn_avail,
+      mkl     = mkl_avail,
+      mkldnn  = mkldnn_avail,
+      openmp  = openmp_avail,
+      mps     = mps_avail
+    )
+  }
+
   # ============================================
   # Section 6: Environment Variables
   # ============================================
   if (verbose) cli::cli_h1("Environment Variables")
-  
-  torch_env_vars <- c("TORCH_HOME", "TORCH_URL", "LANTERN_URL", "CUDA", "CUDA_HOME", 
+
+  torch_env_vars <- c("TORCH_HOME", "TORCH_URL", "LANTERN_URL", "CUDA", "CUDA_HOME",
                       "CUDA_PATH", "LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH")
-  env_set <- FALSE
+  env_values <- list()
   for (var in torch_env_vars) {
     val <- Sys.getenv(var, unset = NA_character_)
     if (!is.na(val) && nzchar(val)) {
+      env_values[[var]] <- val
       if (verbose) cli::cli_bullets(c("*" = "{.envvar {var}}: {.val {val}}"))
-      env_set <- TRUE
     }
   }
   # Check for invalid URL overrides in *_URL
   tor_url <- Sys.getenv("TORCH_URL", "")
   lan_url <- Sys.getenv("LANTERN_URL", "")
-  
+
   for (u in c(tor_url, lan_url)) {
     if (nzchar(u) && !grepl("^https?://", u) && !file.exists(u)) {
-      issues <<- c(issues, 
-                   sprintf("WARNING: Env var points to '%s', which is neither a valid URL nor an existing file. The installer ignored it.", u))
+      issues <<- c(issues,
+        sprintf("WARNING: Env var points to '%s', which is neither a valid URL nor an existing file. The installer ignored it.", u))
     }
   }
-  
-  if (!env_set && verbose) cli::cli_alert_info("No torch-specific environment variables set.")
-  results$env_vars <- env_set
+
+  if (length(env_values) == 0 && verbose) cli::cli_alert_info("No torch-specific environment variables set.")
+  results$env_vars <- env_values
   
   # ============================================
   # Section 7: Summary
