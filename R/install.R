@@ -859,6 +859,12 @@ install_torch_sitrep <- function(verbose = TRUE) {
   results <- list()
   issues <- character()
   
+  # Helper for torch works
+  torch_works <- tryCatch({
+    t <- torch::torch_tensor(1)
+    TRUE
+  }, error = function(e) FALSE)
+  
   # ============================================
   # Section 1: System Information
   # ============================================
@@ -982,7 +988,7 @@ install_torch_sitrep <- function(verbose = TRUE) {
     }
   }
   # ============================================
-  # Section 4: CUDA Detection (replay install logic)
+  # Section 4: CUDA & Accelerators Detection (replay install logic)
   # ============================================
   if (verbose) cli::cli_h1("CUDA Detection")
   
@@ -1068,16 +1074,54 @@ install_torch_sitrep <- function(verbose = TRUE) {
     }
   }
   results$cuda <- list(detected = detected_cuda, kind = install_kind)
+
+  # Section 4c: Other Backend Accelerators Status
+  if (verbose && torch_works) {
+    if (verbose) cli::cli_h1("Other Backend Accelerators Status")
+
+    cuda_available <- tryCatch(isTRUE(torch::cuda_is_available()),        error = function(e) FALSE)
+    cudnn_avail    <- tryCatch(isTRUE(torch::backends_cudnn_is_available()), error = function(e) FALSE)
+    mkl_avail      <- tryCatch(isTRUE(torch::backends_mkl_is_available()),   error = function(e) FALSE)
+    mkldnn_avail   <- tryCatch(isTRUE(torch::backends_mkldnn_is_available()), error = function(e) FALSE)
+    openmp_avail   <- tryCatch(isTRUE(torch::backends_openmp_is_available()), error = function(e) FALSE)
+    mps_avail      <- tryCatch(isTRUE(torch::backends_mps_is_available()),   error = function(e) FALSE)
+
+    if (verbose) {
+      if (cuda_available) cli::cli_alert_success("CUDA is available") else cli::cli_alert_info("CUDA is NOT available (CPU only)")
+      if (cudnn_avail)    cli::cli_alert_success("cuDNN is available") else cli::cli_alert_info("cuDNN is NOT available")
+      if (mkl_avail)      cli::cli_alert_success("MKL is available") else cli::cli_alert_info("MKL is NOT available")
+      if (mkldnn_avail)   cli::cli_alert_success("MKL-DNN is available") else cli::cli_alert_info("MKL-DNN is NOT available")
+      if (openmp_avail)   cli::cli_alert_success("OpenMP is available") else cli::cli_alert_info("OpenMP is NOT available")
+      if (os_type == "Darwin") {
+        if (mps_avail) cli::cli_alert_success("MPS (Apple Silicon GPU) is available") else cli::cli_alert_info("MPS is NOT available")
+      }
+      if (cudnn_avail) {
+        cudnn_ver <- tryCatch(torch::backends_cudnn_version(), error = function(e) NA)
+        if (!is.na(cudnn_ver)) cli::cli_alert_info("cuDNN version: {.val {cudnn_ver}}")
+      }
+    }
+
+    if (install_kind != "cpu" && !cuda_available) {
+      issues <<- c(issues,
+        "CUDA build installed but CUDA is not available.",
+        "Check CUDA installation and driver; verify CUDA_VISIBLE_DEVICES is not hiding all GPUs."
+      )
+    }
+
+    results$backends <- list(
+      cuda    = cuda_available,
+      cudnn   = cudnn_avail,
+      mkl     = mkl_avail,
+      mkldnn  = mkldnn_avail,
+      openmp  = openmp_avail,
+      mps     = mps_avail
+    )
+  }
   
   # ============================================
   # Section 5: Runtime Load Test & Windows Auto-Diagnosis
   # ============================================
   if (verbose) cli::cli_h1("Runtime Load Test")
-  
-  torch_works <- tryCatch({
-    t <- torch::torch_tensor(1)
-    TRUE
-  }, error = function(e) FALSE)
   
   if (torch_works) {
     if (verbose) cli::cli_alert_success("torch is loaded and functional!")
@@ -1212,51 +1256,6 @@ install_torch_sitrep <- function(verbose = TRUE) {
     }
 
     results$runtime <- list(loaded = FALSE)
-  }
-
-  # ============================================
-  # Section 5b: Backend Status
-  # ============================================
-  if (torch_works) {
-    if (verbose) cli::cli_h1("Backend Status")
-
-    cuda_available <- tryCatch(isTRUE(torch::cuda_is_available()),        error = function(e) FALSE)
-    cudnn_avail    <- tryCatch(isTRUE(torch::backends_cudnn_is_available()), error = function(e) FALSE)
-    mkl_avail      <- tryCatch(isTRUE(torch::backends_mkl_is_available()),   error = function(e) FALSE)
-    mkldnn_avail   <- tryCatch(isTRUE(torch::backends_mkldnn_is_available()), error = function(e) FALSE)
-    openmp_avail   <- tryCatch(isTRUE(torch::backends_openmp_is_available()), error = function(e) FALSE)
-    mps_avail      <- tryCatch(isTRUE(torch::backends_mps_is_available()),   error = function(e) FALSE)
-
-    if (verbose) {
-      if (cuda_available) cli::cli_alert_success("CUDA is available") else cli::cli_alert_info("CUDA is NOT available (CPU only)")
-      if (cudnn_avail)    cli::cli_alert_success("cuDNN is available") else cli::cli_alert_info("cuDNN is NOT available")
-      if (mkl_avail)      cli::cli_alert_success("MKL is available") else cli::cli_alert_info("MKL is NOT available")
-      if (mkldnn_avail)   cli::cli_alert_success("MKL-DNN is available") else cli::cli_alert_info("MKL-DNN is NOT available")
-      if (openmp_avail)   cli::cli_alert_success("OpenMP is available") else cli::cli_alert_info("OpenMP is NOT available")
-      if (os_type == "Darwin") {
-        if (mps_avail) cli::cli_alert_success("MPS (Apple Silicon GPU) is available") else cli::cli_alert_info("MPS is NOT available")
-      }
-      if (cudnn_avail) {
-        cudnn_ver <- tryCatch(torch::backends_cudnn_version(), error = function(e) NA)
-        if (!is.na(cudnn_ver)) cli::cli_alert_info("cuDNN version: {.val {cudnn_ver}}")
-      }
-    }
-
-    if (install_kind != "cpu" && !cuda_available) {
-      issues <<- c(issues,
-        "CUDA build installed but CUDA is not available.",
-        "Check CUDA installation and driver; verify CUDA_VISIBLE_DEVICES is not hiding all GPUs."
-      )
-    }
-
-    results$backends <- list(
-      cuda    = cuda_available,
-      cudnn   = cudnn_avail,
-      mkl     = mkl_avail,
-      mkldnn  = mkldnn_avail,
-      openmp  = openmp_avail,
-      mps     = mps_avail
-    )
   }
 
   # ============================================
