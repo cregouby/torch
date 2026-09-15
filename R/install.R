@@ -627,10 +627,6 @@ is_macos <- function() {
   grepl("darwin", Sys.info()["sysname"], ignore.case = TRUE)
 }
 
-is_windows <- function() {
-  grepl("windows", Sys.info()["sysname"], ignore.case = TRUE)
-}
-
 is_linux <- function() {
   grepl("linux", Sys.info()["sysname"], ignore.case = TRUE)
 }
@@ -1268,8 +1264,12 @@ install_torch_sitrep <- function(verbose = TRUE) {
   # ============================================
   if (verbose) cli::cli_h1("Environment Variables")
 
-  torch_env_vars <- c("TORCH_HOME", "TORCH_URL", "LANTERN_URL", "CUDA", "CUDA_HOME",
-                      "CUDA_PATH", "LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH")
+  torch_env_vars <- c(
+    "TORCH_HOME", "TORCH_URL", "LANTERN_URL", "LANTERN_BASE_URL",
+    "TORCH_INSTALL", "TORCH_LOAD", "TORCH_INSTALL_DEBUG", "TORCH_LOG",
+    "TORCH_VERIFY_LOAD", "CUDA", "CUDA_HOME", "CUDA_PATH",
+    "CUDA_VISIBLE_DEVICES", "LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH"
+  )
   env_values <- list()
   for (var in torch_env_vars) {
     val <- Sys.getenv(var, unset = NA_character_)
